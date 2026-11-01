@@ -25,6 +25,8 @@ const TOAST_DURATION: Duration = Duration::from_secs(4);
 const UNDO_LIMIT: usize = 20;
 /// How long a Home bar takes to reach a new set count.
 const BAR_DURATION: Duration = Duration::from_millis(220);
+/// How long a row flashes when its muscle reaches the weekly target.
+const PULSE_DURATION: Duration = Duration::from_millis(350);
 /// Lines the Why text moves per scroll-wheel step.
 const WHEEL_LINES: u16 = 3;
 
@@ -148,6 +150,8 @@ pub struct App {
     undo: Vec<UndoEntry>,
     /// Bars still moving to a new count, by the week and muscle they show.
     bars: Vec<(Week, Muscle, BarMove)>,
+    /// Muscles that just reached the target, flashing on Home.
+    pulses: Vec<(Week, Muscle, Tween)>,
     dirty: bool,
     quit: bool,
 }
@@ -174,6 +178,7 @@ impl App {
             now,
             undo: Vec::new(),
             bars: Vec::new(),
+            pulses: Vec::new(),
             dirty: false,
             quit: false,
         }
@@ -214,6 +219,14 @@ impl App {
     pub fn is_animating(&self) -> bool {
         let now = self.now;
         self.bars.iter().any(|(.., bar)| bar.tween.is_running(now))
+            || self.pulses.iter().any(|(.., pulse)| pulse.is_running(now))
+    }
+
+    /// Whether a muscle's row on Home is flashing for reaching the target.
+    pub fn is_pulsing(&self, muscle: Muscle) -> bool {
+        self.pulses
+            .iter()
+            .any(|&(week, m, pulse)| week == self.week && m == muscle && pulse.is_running(self.now))
     }
 
     /// How full a muscle's bar on Home is drawn right now.
@@ -230,6 +243,7 @@ impl App {
     pub fn tick(&mut self, now: Instant, today: Date) {
         self.now = now;
         self.bars.retain(|(.., bar)| bar.tween.is_running(now));
+        self.pulses.retain(|(.., pulse)| pulse.is_running(now));
         if self
             .toast
             .as_ref()
@@ -571,10 +585,17 @@ impl App {
             return;
         }
         let now = self.now;
+        let goal = self.target().sets();
         for muscle in Muscle::ALL {
             let old = before.get(&muscle).copied().unwrap_or_default();
-            if self.tracker.log.sets(week, muscle) == old {
+            let new = self.tracker.log.sets(week, muscle);
+            if new == old {
                 continue;
+            }
+            if old < goal && goal <= new {
+                self.pulses.retain(|&(w, m, _)| (w, m) != (week, muscle));
+                self.pulses
+                    .push((week, muscle, Tween::new(now, PULSE_DURATION)));
             }
             let mut from = Fill::from(old);
             if let Some(index) = self
@@ -930,6 +951,27 @@ mod tests {
         press(&mut still, &[KeyCode::Char('+')]);
         assert!(!still.is_animating());
         assert_eq!(still.bar_fill(Muscle::Chest), Fill::from(Sets::ONE));
+    }
+
+    #[test]
+    fn reaching_the_target_flashes_the_row_once() {
+        let mut app = onboarded();
+        let start = app.now;
+        let goal = app.target().sets().halves();
+        for _ in 1..goal / 2 {
+            press(&mut app, &[KeyCode::Char('+')]);
+        }
+        assert!(!app.is_pulsing(Muscle::Chest), "still below the target");
+
+        press(&mut app, &[KeyCode::Char('+')]);
+        assert_eq!(sets(&app, Muscle::Chest), app.target().sets());
+        assert!(app.is_pulsing(Muscle::Chest));
+        assert!(!app.is_pulsing(Muscle::UpperBack));
+
+        app.tick(start + PULSE_DURATION, date(2026, 11, 1));
+        assert!(!app.is_pulsing(Muscle::Chest));
+        press(&mut app, &[KeyCode::Char('+')]);
+        assert!(!app.is_pulsing(Muscle::Chest), "already past the target");
     }
 
     #[test]

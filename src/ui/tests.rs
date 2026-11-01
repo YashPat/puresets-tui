@@ -7,7 +7,9 @@ use jiff::civil::date;
 use ratatui::{
     Terminal,
     backend::TestBackend,
+    buffer::Buffer,
     crossterm::event::{KeyCode, KeyEvent},
+    style::Modifier,
 };
 
 use super::{MIN_HEIGHT, MIN_WIDTH, Theme, draw};
@@ -182,5 +184,52 @@ fn mono_theme_renders_without_colour() {
             .iter()
             .all(|cell| cell.fg == ratatui::style::Color::Reset),
         "mono uses no foreground colours"
+    );
+}
+
+/// Draws one frame in `theme` and returns the raw cells.
+fn cells(app: &mut App, theme: Theme) -> Buffer {
+    let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+    terminal
+        .draw(|frame| {
+            draw(frame, app, theme);
+        })
+        .unwrap();
+    terminal.backend().buffer().clone()
+}
+
+/// Whether the cells where `text` first appears are drawn in reverse video.
+fn reversed_at(buffer: &Buffer, text: &str) -> bool {
+    let width = buffer.area.width;
+    let rows: Vec<String> = (0..buffer.area.height)
+        .map(|y| (0..width).map(|x| buffer[(x, y)].symbol()).collect())
+        .collect();
+    let (y, column) = rows
+        .iter()
+        .enumerate()
+        .find_map(|(y, row)| row.find(text).map(|byte| (y, row[..byte].chars().count())))
+        .unwrap_or_else(|| panic!("{text:?} is on screen"));
+    let x = u16::try_from(column).unwrap();
+    let y = u16::try_from(y).unwrap();
+    buffer[(x, y)].modifier.contains(Modifier::REVERSED)
+}
+
+#[test]
+fn reaching_the_target_flashes_without_colour_too() {
+    let mut app = onboarded();
+    let halves = app.target().sets().halves();
+    for _ in 0..halves / 2 {
+        press(&mut app, &[KeyCode::Char('+')]);
+    }
+    assert!(reversed_at(&cells(&mut app, Theme::MONO), "✓ on target"));
+
+    let mut still = onboarded();
+    still.motion = crate::app::Motion::Off;
+    for _ in 0..halves / 2 {
+        press(&mut still, &[KeyCode::Char('+')]);
+    }
+    assert!(
+        !reversed_at(&cells(&mut still, Theme::MONO), "✓ on target"),
+        "no flash with motion off"
     );
 }

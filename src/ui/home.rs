@@ -187,6 +187,7 @@ fn category_lines(app: &App, categories: &[Category], width: u16, theme: Theme) 
             let bar = Bar {
                 sets,
                 fill: app.bar_fill(muscle),
+                pulse: app.is_pulsing(muscle),
             };
             lines.push(muscle_row(muscle, bar, target, row, width, theme));
         }
@@ -223,11 +224,12 @@ fn category_header(
 struct Bar {
     sets: Sets,
     fill: Fill,
+    pulse: bool,
 }
 
 fn muscle_row(
     muscle: Muscle,
-    Bar { sets, fill }: Bar,
+    Bar { sets, fill, pulse }: Bar,
     target: Target,
     row: Row,
     width: u16,
@@ -252,7 +254,9 @@ fn muscle_row(
     spans.push(Span::styled(format!(" {sets:>4}"), count_style));
     spans.push(Span::styled(format!(" / {target:<3}"), theme.dim()));
     let status = status_text(sets, target);
-    let status_style = if sets >= target.sets() {
+    let status_style = if pulse {
+        theme.pulse()
+    } else if sets >= target.sets() {
         theme.success()
     } else {
         theme.dim()

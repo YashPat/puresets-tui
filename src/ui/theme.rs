@@ -119,6 +119,13 @@ impl Theme {
         self.fg(Color::Green)
     }
 
+    /// A brief flash on a row that just reached its target. Reversed video
+    /// shows without colour too; the ✓ beside it says the same thing.
+    pub fn pulse(self) -> Style {
+        self.success()
+            .add_modifier(Modifier::BOLD | Modifier::REVERSED)
+    }
+
     pub fn error(self) -> Style {
         self.fg(Color::Red).add_modifier(Modifier::BOLD)
     }
