@@ -6,7 +6,7 @@ use ratatui::{
     widgets::ListState,
 };
 
-use super::text_input::TextInput;
+use super::{MouseAction, MouseTarget, text_input::TextInput};
 use crate::domain::{Category, Exercise, ExerciseDraft, Muscle, Origin, Role, Tracker};
 
 /// The most sets that can be logged at once, as in the iOS app.
@@ -383,6 +383,41 @@ impl LogSheet {
                 }
                 _ => SheetEvent::None,
             },
+        }
+    }
+
+    /// The wheel steps through the list or the set count; clicks pick rows
+    /// and muscles. A second click on the selected row chooses it.
+    pub fn handle_mouse(
+        &mut self,
+        target: MouseTarget,
+        action: MouseAction,
+        tracker: &mut Tracker,
+    ) -> SheetEvent {
+        let wheel = match action {
+            MouseAction::ScrollUp => Some(KeyCode::Up),
+            MouseAction::ScrollDown => Some(KeyCode::Down),
+            MouseAction::Click => None,
+        };
+        match (&mut self.step, target, wheel) {
+            // Anywhere on the sheet, the wheel works like the arrow keys.
+            (Step::Pick | Step::Sets(_), target, Some(code)) if target != MouseTarget::Backdrop => {
+                self.handle_key(KeyEvent::from(code), tracker)
+            }
+            (Step::Pick, MouseTarget::LogRow(row), None) if row == self.selected => {
+                self.handle_key(KeyEvent::from(KeyCode::Enter), tracker)
+            }
+            (Step::Pick, MouseTarget::LogRow(row), None) => {
+                self.selected = row;
+                SheetEvent::None
+            }
+            (Step::Create(form), MouseTarget::CreateMuscle(muscle), None) => {
+                form.focus = Field::Muscles;
+                form.cursor = muscle;
+                form.cycle_role();
+                SheetEvent::None
+            }
+            _ => SheetEvent::None,
         }
     }
 

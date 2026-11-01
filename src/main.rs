@@ -197,14 +197,24 @@ fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &mut Stora
     let theme = Theme::from_env();
     let mut unsaved = false;
     let mut hits = HitMap::default();
+    let mut redraw = true;
+    let mut last_draw = Instant::now();
     while !app.should_quit() {
-        terminal.draw(|frame| hits = ui::draw(frame, app, theme))?;
+        // Events that change nothing, such as mouse moves, skip the redraw
+        // until the clock is due for one.
+        if redraw || last_draw.elapsed() >= POLL_INTERVAL {
+            terminal.draw(|frame| hits = ui::draw(frame, app, theme))?;
+            last_draw = Instant::now();
+        }
+        redraw = false;
         if event::poll(POLL_INTERVAL)? {
-            match event::read()? {
-                Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
-                Event::Paste(text) => app.paste(&text),
-                Event::Mouse(mouse) => handle_mouse(app, &hits, mouse),
-                _ => {}
+            // Skim past ignored events, but redraw after any that acted, so
+            // the next click is hit-tested against what is on screen.
+            loop {
+                redraw = handle_event(app, &hits, event::read()?);
+                if redraw || !event::poll(Duration::ZERO)? {
+                    break;
+                }
             }
         }
         app.tick(Instant::now(), jiff::Zoned::now().date());
@@ -231,17 +241,31 @@ fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &mut Stora
     Ok(())
 }
 
+/// Applies one event; returns false if it was one the app ignores.
+fn handle_event(app: &mut App, hits: &HitMap, event: Event) -> bool {
+    match event {
+        Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
+        Event::Paste(text) => app.paste(&text),
+        Event::Mouse(mouse) => return handle_mouse(app, hits, mouse),
+        Event::Resize(..) => {}
+        _ => return false,
+    }
+    true
+}
+
 /// Hit-tests against the frame just drawn, which is what the user clicked on.
-fn handle_mouse(app: &mut App, hits: &HitMap, mouse: MouseEvent) {
+fn handle_mouse(app: &mut App, hits: &HitMap, mouse: MouseEvent) -> bool {
     let action = match mouse.kind {
         MouseEventKind::Down(MouseButton::Left) => MouseAction::Click,
         MouseEventKind::ScrollUp => MouseAction::ScrollUp,
         MouseEventKind::ScrollDown => MouseAction::ScrollDown,
-        _ => return,
+        _ => return false,
     };
-    if let Some(target) = hits.at(Position::new(mouse.column, mouse.row)) {
-        app.handle_mouse(target, action);
-    }
+    let Some(target) = hits.at(Position::new(mouse.column, mouse.row)) else {
+        return false;
+    };
+    app.handle_mouse(target, action);
+    true
 }
 
 fn save_error_message(err: &SaveError) -> String {

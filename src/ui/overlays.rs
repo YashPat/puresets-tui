@@ -7,18 +7,23 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, Padding, Paragraph, Wrap},
 };
 
-use super::{theme::Theme, widgets::centered};
-use crate::domain::Goal;
+use super::{
+    HitMap,
+    theme::Theme,
+    widgets::{centered, row_in, wrapped_row},
+};
+use crate::{app::MouseTarget, domain::Goal};
 
 fn modal(
     frame: &mut Frame<'_>,
     area: Rect,
     title: &str,
-    width: u16,
-    height: u16,
+    (width, height): (u16, u16),
+    hits: &mut HitMap,
     theme: Theme,
 ) -> Rect {
     let rect = centered(area, width, height);
+    hits.add(rect, MouseTarget::Modal);
     let block = Block::new()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -31,8 +36,14 @@ fn modal(
     inner
 }
 
-pub fn draw_onboarding(frame: &mut Frame<'_>, area: Rect, choice: Goal, theme: Theme) {
-    let inner = modal(frame, area, "Welcome to PureSets", 70, 19, theme);
+pub fn draw_onboarding(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    choice: Goal,
+    hits: &mut HitMap,
+    theme: Theme,
+) {
+    let inner = modal(frame, area, "Welcome to PureSets", (70, 19), hits, theme);
     let mut lines = vec![
         Line::styled(
             "Track weekly hard sets per muscle. Nothing else.",
@@ -49,6 +60,11 @@ pub fn draw_onboarding(frame: &mut Frame<'_>, area: Rect, choice: Goal, theme: T
         Line::raw(""),
     ];
     for goal in Goal::ALL {
+        // A goal's name and blurb lines both pick it.
+        let top = wrapped_row(&lines, lines.len(), inner.width);
+        for row in [top, top.saturating_add(1)] {
+            hits.add(row_in(inner, row), MouseTarget::Goal(goal));
+        }
         let active = goal == choice;
         let (marker, style) = if active {
             ("▸ ● ", theme.selected())
@@ -89,6 +105,7 @@ const HELP: &[HelpSection] = &[
             ("1-4 / tab", "switch screen"),
             ("?", "this help"),
             ("q", "quit (ctrl-c works anywhere)"),
+            ("mouse", "click or scroll; shift-drag to select text"),
         ],
     ),
     (
@@ -128,7 +145,7 @@ const HELP: &[HelpSection] = &[
 /// Wide terminals get two columns of help so it fits without scrolling.
 const HELP_TWO_COLUMNS: u16 = 100;
 
-pub fn draw_help(frame: &mut Frame<'_>, area: Rect, theme: Theme) {
+pub fn draw_help(frame: &mut Frame<'_>, area: Rect, hits: &mut HitMap, theme: Theme) {
     let columns: Vec<&[HelpSection]> = if area.width >= HELP_TWO_COLUMNS {
         vec![&HELP[..2], &HELP[2..]]
     } else {
@@ -142,7 +159,7 @@ pub fn draw_help(frame: &mut Frame<'_>, area: Rect, theme: Theme) {
     // Borders, top padding and the closing hint.
     let height = u16::try_from(rows + 5).unwrap_or(u16::MAX);
     let width = if columns.len() > 1 { 96 } else { 58 };
-    let inner = modal(frame, area, "Keyboard", width, height, theme);
+    let inner = modal(frame, area, "Keyboard", (width, height), hits, theme);
 
     let [body, hint] = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(inner);
     let areas = Layout::horizontal(vec![Constraint::Fill(1); column_lines.len()])

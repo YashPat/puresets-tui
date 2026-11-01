@@ -56,11 +56,22 @@ impl Tab {
 /// What a mouse event landed on, as the last frame laid it out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseTarget {
+    /// Something that does exactly what this key does, such as a footer hint.
+    Key(KeyEvent),
     Tab(Tab),
+    /// The current screen's content; the wheel scrolls or moves through it.
+    Body,
     Muscle(Muscle),
-    WhyText,
-    /// The exercise list in the log sheet's pick step.
-    LogList,
+    Period(Period),
+    /// Outside the open overlay.
+    Backdrop,
+    /// Inside the open overlay, but on nothing clickable.
+    Modal,
+    Goal(Goal),
+    /// A row of the log sheet's exercise list, by its index in [`LogSheet::rows`].
+    LogRow(usize),
+    /// A muscle in the create form's grid.
+    CreateMuscle(Muscle),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -239,30 +250,79 @@ impl App {
 
     /// The mouse is an extra: every action here has a key that does the same.
     pub fn handle_mouse(&mut self, target: MouseTarget, action: MouseAction) {
-        if self.overlay.is_some() {
-            let in_pick =
-                matches!(&self.overlay, Some(Overlay::Log(sheet)) if sheet.step == Step::Pick);
-            if target == MouseTarget::LogList && in_pick {
-                match action {
-                    MouseAction::ScrollUp => self.handle_key(KeyEvent::from(KeyCode::Up)),
-                    MouseAction::ScrollDown => self.handle_key(KeyEvent::from(KeyCode::Down)),
-                    MouseAction::Click => {}
-                }
-            }
+        if let (MouseTarget::Key(key), MouseAction::Click) = (target, action) {
+            self.handle_key(key);
+            return;
+        }
+        if let Some(overlay) = self.overlay.take() {
+            self.overlay = self.overlay_mouse(overlay, target, action);
             return;
         }
         match (target, action) {
             (MouseTarget::Tab(tab), MouseAction::Click) => self.tab = tab,
+            // A second click on the selected muscle logs it, as enter does.
             (MouseTarget::Muscle(muscle), MouseAction::Click) if self.tab == Tab::Home => {
-                self.selected = muscle;
+                if self.selected == muscle {
+                    self.open_log(Some(muscle));
+                } else {
+                    self.selected = muscle;
+                }
             }
-            (MouseTarget::WhyText, MouseAction::ScrollUp) if self.tab == Tab::Why => {
-                self.why_scroll = self.why_scroll.saturating_sub(WHEEL_LINES);
+            (MouseTarget::Period(period), MouseAction::Click) if self.tab == Tab::Insights => {
+                self.period = period;
             }
-            (MouseTarget::WhyText, MouseAction::ScrollDown) if self.tab == Tab::Why => {
-                self.why_scroll = self.why_scroll.saturating_add(WHEEL_LINES);
+            (MouseTarget::Body | MouseTarget::Muscle(_), MouseAction::ScrollUp) => {
+                self.wheel(KeyCode::Up);
+            }
+            (MouseTarget::Body | MouseTarget::Muscle(_), MouseAction::ScrollDown) => {
+                self.wheel(KeyCode::Down);
             }
             _ => {}
+        }
+    }
+
+    /// The wheel moves the home selection one muscle and the Why text a few lines.
+    fn wheel(&mut self, code: KeyCode) {
+        match (self.tab, code) {
+            (Tab::Home, _) => self.home_key(KeyEvent::from(code)),
+            (Tab::Why, KeyCode::Up) => {
+                self.why_scroll = self.why_scroll.saturating_sub(WHEEL_LINES);
+            }
+            (Tab::Why, _) => self.why_scroll = self.why_scroll.saturating_add(WHEEL_LINES),
+            (Tab::Insights | Tab::Settings, _) => {}
+        }
+    }
+
+    fn overlay_mouse(
+        &mut self,
+        overlay: Overlay,
+        target: MouseTarget,
+        action: MouseAction,
+    ) -> Option<Overlay> {
+        match (overlay, target, action) {
+            (Overlay::Help, MouseTarget::Backdrop, MouseAction::Click) => None,
+            // Click a goal to choose it, then again to confirm.
+            (Overlay::Onboarding { choice }, MouseTarget::Goal(goal), MouseAction::Click) => {
+                if goal == choice {
+                    self.overlay_key(
+                        Overlay::Onboarding { choice },
+                        KeyEvent::from(KeyCode::Enter),
+                    )
+                } else {
+                    Some(Overlay::Onboarding { choice: goal })
+                }
+            }
+            // Clicking away only closes the sheet while nothing is half done.
+            (Overlay::Log(sheet), MouseTarget::Backdrop, MouseAction::Click)
+                if sheet.step == Step::Pick =>
+            {
+                None
+            }
+            (Overlay::Log(mut sheet), target, action) => {
+                let event = sheet.handle_mouse(target, action, &mut self.tracker);
+                self.sheet_event(sheet, event)
+            }
+            (overlay, ..) => Some(overlay),
         }
     }
 
@@ -308,23 +368,31 @@ impl App {
                 }
                 _ => Some(Overlay::Onboarding { choice }),
             },
-            Overlay::Log(mut sheet) => match sheet.handle_key(key, &mut self.tracker) {
-                SheetEvent::None => Some(Overlay::Log(sheet)),
-                SheetEvent::Close => None,
-                SheetEvent::Log { exercise, count } => {
-                    self.log_exercise(&exercise, count);
-                    None
-                }
-                SheetEvent::Saved(message) => {
-                    self.dirty = true;
-                    self.notify(ToastKind::Success, message);
-                    Some(Overlay::Log(sheet))
-                }
-                SheetEvent::Notice(message) => {
-                    self.notify(ToastKind::Info, message);
-                    Some(Overlay::Log(sheet))
-                }
-            },
+            Overlay::Log(mut sheet) => {
+                let event = sheet.handle_key(key, &mut self.tracker);
+                self.sheet_event(sheet, event)
+            }
+        }
+    }
+
+    /// Acts on what the log sheet asked for; returns the sheet unless it closed.
+    fn sheet_event(&mut self, sheet: Box<LogSheet>, event: SheetEvent) -> Option<Overlay> {
+        match event {
+            SheetEvent::None => Some(Overlay::Log(sheet)),
+            SheetEvent::Close => None,
+            SheetEvent::Log { exercise, count } => {
+                self.log_exercise(&exercise, count);
+                None
+            }
+            SheetEvent::Saved(message) => {
+                self.dirty = true;
+                self.notify(ToastKind::Success, message);
+                Some(Overlay::Log(sheet))
+            }
+            SheetEvent::Notice(message) => {
+                self.notify(ToastKind::Info, message);
+                Some(Overlay::Log(sheet))
+            }
         }
     }
 

@@ -2,6 +2,7 @@
 
 use ratatui::{
     Frame,
+    crossterm::event::{KeyCode, KeyEvent},
     layout::{Constraint, Layout, Rect},
     text::{Line, Span},
     widgets::Paragraph,
@@ -10,7 +11,7 @@ use ratatui::{
 use super::{
     HitMap,
     theme::Theme,
-    widgets::{Row, fit, set_bar, set_bar_width, status_text},
+    widgets::{Row, fit, set_bar, set_bar_width, span_areas, status_text},
 };
 use crate::{
     app::{App, MouseTarget},
@@ -33,7 +34,7 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &mut App, hits: &mut HitMap,
         Constraint::Min(0),
     ])
     .areas(area);
-    draw_week_bar(frame, week_bar, app, theme);
+    draw_week_bar(frame, week_bar, app, hits, theme);
 
     if area.width >= TWO_COLUMNS {
         let [left, _, right] = Layout::horizontal([
@@ -99,7 +100,7 @@ fn scroll_to(app: &mut App, selected: usize, total: usize, height: u16) -> u16 {
     u16::try_from(scroll).unwrap_or(u16::MAX)
 }
 
-fn draw_week_bar(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
+fn draw_week_bar(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, theme: Theme) {
     let week = app.week;
     let current = app.current_week();
     let can_go_back = week > app.earliest_week();
@@ -142,6 +143,13 @@ fn draw_week_bar(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
 
     let [left, right] =
         Layout::horizontal([Constraint::Min(0), Constraint::Length(30)]).areas(area);
+    let areas = span_areas(left, &spans);
+    let key = |code| MouseTarget::Key(KeyEvent::from(code));
+    hits.add(areas[0], key(KeyCode::Left));
+    hits.add(areas[3], key(KeyCode::Right));
+    if week != current {
+        hits.add(areas[5].union(areas[6]), key(KeyCode::Char('t')));
+    }
     frame.render_widget(Line::from(spans), left);
     frame.render_widget(summary, right);
 }

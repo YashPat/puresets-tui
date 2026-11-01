@@ -10,11 +10,12 @@ use ratatui::{
 };
 
 use super::{
+    HitMap,
     theme::Theme,
-    widgets::{fit, set_bar, set_bar_width, status_text},
+    widgets::{fit, set_bar, set_bar_width, span_areas, status_text},
 };
 use crate::{
-    app::App,
+    app::{App, MouseTarget},
     domain::{CategorySummary, Insights, Period, ProgressLevel, Target},
 };
 
@@ -25,7 +26,7 @@ const CARD_HEIGHT: u16 = 6;
 /// Width needed for the four category cards in a single row.
 const CARDS_IN_ROW: u16 = 96;
 
-pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
+pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, theme: Theme) {
     let target = app.target();
     let current = app.current_week();
     let insights = Insights::compute(&app.tracker.log, current, app.period, target);
@@ -41,6 +42,11 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
     .areas(area);
 
     draw_selector(frame, selector, app.period, &insights, theme);
+    // Each period's label is followed by a spacer span.
+    let labels = span_areas(selector, &period_spans(app.period, theme));
+    for (period, label) in Period::ALL.into_iter().zip(labels.iter().step_by(2)) {
+        hits.add(*label, MouseTarget::Period(period));
+    }
     draw_cards(frame, cards, &insights, target, card_rows, theme);
 
     if body.width >= HISTORY_MIN_WIDTH * 2 {
@@ -64,16 +70,7 @@ fn draw_selector(
     insights: &Insights,
     theme: Theme,
 ) {
-    let mut spans = Vec::new();
-    for option in Period::ALL {
-        let style = if option == period {
-            theme.tab_active()
-        } else {
-            theme.dim()
-        };
-        spans.push(Span::styled(format!(" {} ", option.label()), style));
-        spans.push(Span::raw(" "));
-    }
+    let mut spans = period_spans(period, theme);
     let (Some(newest), Some(oldest)) = (insights.weeks.first(), insights.weeks.last()) else {
         frame.render_widget(Line::from(spans), area);
         return;
@@ -91,6 +88,21 @@ fn draw_selector(
     spans.push(Span::styled(insights.total.to_string(), theme.bold()));
     spans.push(Span::styled(" sets logged", theme.dim()));
     frame.render_widget(Line::from(spans), area);
+}
+
+/// The period choices, each a label then a space.
+fn period_spans(period: Period, theme: Theme) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    for option in Period::ALL {
+        let style = if option == period {
+            theme.tab_active()
+        } else {
+            theme.dim()
+        };
+        spans.push(Span::styled(format!(" {} ", option.label()), style));
+        spans.push(Span::raw(" "));
+    }
+    spans
 }
 
 fn draw_cards(

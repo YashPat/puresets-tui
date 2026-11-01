@@ -6,6 +6,7 @@ use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     style::Style,
     text::{Line, Span},
+    widgets::{Paragraph, Wrap},
 };
 
 use super::theme::Theme;
@@ -112,6 +113,46 @@ pub fn key_hints(hints: &[(&str, &str)], theme: Theme) -> Line<'static> {
         spans.push(Span::styled(format!(" {action}"), theme.dim()));
     }
     Line::from(spans)
+}
+
+/// Where each span of a left-aligned, one-row line lands in `area`.
+///
+/// Spans past the right edge get an empty rectangle.
+pub fn span_areas(area: Rect, spans: &[Span<'_>]) -> Vec<Rect> {
+    let mut x = area.x;
+    spans
+        .iter()
+        .map(|span| {
+            let width = u16::try_from(span.width()).unwrap_or(u16::MAX);
+            let rect = Rect {
+                x,
+                width,
+                height: 1,
+                ..area
+            };
+            x = x.saturating_add(width);
+            rect.intersection(area)
+        })
+        .collect()
+}
+
+/// The row `lines[index]` starts on when the lines wrap at `width`.
+pub fn wrapped_row(lines: &[Line<'_>], index: usize, width: u16) -> u16 {
+    let before = lines[..index.min(lines.len())].to_vec();
+    let rows = Paragraph::new(before)
+        .wrap(Wrap { trim: false })
+        .line_count(width);
+    u16::try_from(rows).unwrap_or(u16::MAX)
+}
+
+/// A one-row rectangle `row` rows into `area`, or an empty one below it.
+pub fn row_in(area: Rect, row: u16) -> Rect {
+    Rect {
+        y: area.y.saturating_add(row),
+        height: 1,
+        ..area
+    }
+    .intersection(area)
 }
 
 /// A rectangle of at most `width` × `height`, centred in `area`.

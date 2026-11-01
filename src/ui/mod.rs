@@ -12,6 +12,7 @@ mod widgets;
 
 use ratatui::{
     Frame,
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
     layout::{Constraint, Layout, Position, Rect},
     text::{Line, Span},
     widgets::Paragraph,
@@ -67,26 +68,26 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App, theme: Theme) -> HitMap {
     let body = body.inner(ratatui::layout::Margin::new(2, 0));
 
     draw_header(frame, header, app, &mut hits, theme);
+    hits.add(body, MouseTarget::Body);
     match app.tab {
         Tab::Home => home::draw(frame, body, app, &mut hits, theme),
-        Tab::Insights => insights::draw(frame, body, app, theme),
-        Tab::Why => {
-            why::draw(frame, body, app, theme);
-            hits.add(body, MouseTarget::WhyText);
-        }
-        Tab::Settings => settings::draw(frame, body, app, theme),
+        Tab::Insights => insights::draw(frame, body, app, &mut hits, theme),
+        Tab::Why => why::draw(frame, body, app, theme),
+        Tab::Settings => settings::draw(frame, body, app, &mut hits, theme),
     }
-    draw_footer(frame, footer, app, theme);
-    // Overlays are modal: nothing underneath takes clicks.
+    // Overlays are modal: nothing underneath takes clicks, and a click
+    // outside one lands on the backdrop. The footer hints stay live.
     if app.overlay.is_some() {
         hits.regions.clear();
+        hits.add(area, MouseTarget::Backdrop);
     }
+    draw_footer(frame, footer, app, &mut hits, theme);
 
     let overlay_area = area.inner(ratatui::layout::Margin::new(1, 1));
     match &mut app.overlay {
-        Some(Overlay::Help) => overlays::draw_help(frame, overlay_area, theme),
+        Some(Overlay::Help) => overlays::draw_help(frame, overlay_area, &mut hits, theme),
         Some(Overlay::Onboarding { choice }) => {
-            overlays::draw_onboarding(frame, overlay_area, *choice, theme);
+            overlays::draw_onboarding(frame, overlay_area, *choice, &mut hits, theme);
         }
         Some(Overlay::Log(sheet)) => {
             log_sheet::draw(
@@ -129,17 +130,13 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, 
         } else {
             theme.dim()
         };
-        let label = Span::styled(label, style);
-        let x = spans.iter().map(Span::width).sum::<usize>();
-        let label_area = Rect {
-            x: area.x.saturating_add(u16::try_from(x).unwrap_or(u16::MAX)),
-            width: u16::try_from(label.width()).unwrap_or(u16::MAX),
-            height: 1,
-            ..area
-        };
-        hits.add(label_area.intersection(area), MouseTarget::Tab(tab));
-        spans.push(label);
+        spans.push(Span::styled(label, style));
         spans.push(Span::raw(" "));
+    }
+    // Each tab's label is the second-last span pushed for it.
+    let areas = widgets::span_areas(area, &spans);
+    for (tab, label) in Tab::ALL.into_iter().zip(areas.iter().skip(2).step_by(2)) {
+        hits.add(*label, MouseTarget::Tab(tab));
     }
     let tabs = Line::from(spans);
     let target = Line::from(vec![
@@ -157,21 +154,52 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, 
     }
 }
 
-fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
-    let line = if let Some(toast) = &app.toast {
-        Line::styled(format!(" {}", toast.message), theme.toast(toast.kind))
-    } else {
-        let mut hints = footer_hints(app);
-        let width = |hints: &[(&str, &str)]| key_hints(hints, theme).width() + 1;
-        // Drop hints from the middle so the closing help/quit/back hints stay.
-        while width(&hints) > usize::from(area.width) && hints.len() > 2 {
-            hints.remove(hints.len() - 3);
-        }
-        let mut line = key_hints(&hints, theme);
-        line.spans.insert(0, Span::raw(" "));
-        line
-    };
+fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, theme: Theme) {
+    if let Some(toast) = &app.toast {
+        let line = Line::styled(format!(" {}", toast.message), theme.toast(toast.kind));
+        frame.render_widget(line, area);
+        return;
+    }
+    let mut shown = footer_hints(app);
+    let width = |hints: &[(&str, &str)]| key_hints(hints, theme).width() + 1;
+    // Drop hints from the middle so the closing help/quit/back hints stay.
+    while width(&shown) > usize::from(area.width) && shown.len() > 2 {
+        shown.remove(shown.len() - 3);
+    }
+    let mut line = key_hints(&shown, theme);
+    line.spans.insert(0, Span::raw(" "));
+    // After the leading space, each hint is a key span and an action span,
+    // with a separator span between hints.
+    let areas = widgets::span_areas(area, &line.spans);
+    for (index, (key, _)) in shown.iter().enumerate() {
+        let first = 1 + index * 3;
+        let (Some(key_area), Some(action_area), Some(event)) =
+            (areas.get(first), areas.get(first + 1), hint_key(key))
+        else {
+            continue;
+        };
+        hits.add(key_area.union(*action_area), MouseTarget::Key(event));
+    }
     frame.render_widget(line, area);
+}
+
+/// The key a footer hint names, if it names exactly one.
+fn hint_key(hint: &str) -> Option<KeyEvent> {
+    let code = match hint {
+        "enter" => KeyCode::Enter,
+        "esc" => KeyCode::Esc,
+        "tab" => KeyCode::Tab,
+        "ctrl-c" => return Some(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+        "ctrl-d" => return Some(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)),
+        _ => {
+            let mut chars = hint.chars();
+            match (chars.next(), chars.next()) {
+                (Some(c), None) => KeyCode::Char(c),
+                _ => return None,
+            }
+        }
+    };
+    Some(KeyEvent::from(code))
 }
 
 /// The keys that matter right now, most useful first.

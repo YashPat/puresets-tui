@@ -2,20 +2,29 @@
 
 use ratatui::{
     Frame,
+    crossterm::event::{KeyCode, KeyEvent},
     layout::Rect,
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
 };
 
-use super::theme::Theme;
+use super::{
+    HitMap,
+    theme::Theme,
+    widgets::{row_in, span_areas, wrapped_row},
+};
 use crate::{
-    app::App,
+    app::{App, MouseTarget},
     domain::{Goal, Target},
 };
 
+/// Lines of the target section, for placing click targets.
+const TARGET_LINE: usize = 2;
+const FIRST_GOAL_LINE: usize = 5;
+
 const LABEL_WIDTH: usize = 18;
 
-pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
+pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, theme: Theme) {
     let target = app.target();
     let label = |text: &str| Span::styled(format!("{text:<LABEL_WIDTH$}"), theme.dim());
     let preset = target.goal().map_or_else(
@@ -66,6 +75,8 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
         ]));
     }
 
+    add_target_hits(hits, area, &lines);
+
     let customs = app.tracker.catalog.customs().count();
     let since = app.tracker.first_week.map_or_else(
         || "not yet".to_owned(),
@@ -113,4 +124,24 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
         ),
     ]);
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), area);
+}
+
+/// The ‹ › arrows step the target; a preset's row picks it, as its key does.
+fn add_target_hits(hits: &mut HitMap, area: Rect, lines: &[Line<'_>]) {
+    let key = |c| MouseTarget::Key(KeyEvent::from(KeyCode::Char(c)));
+    let row = |index| row_in(area, wrapped_row(lines, index, area.width));
+    let arrows = span_areas(row(TARGET_LINE), &lines[TARGET_LINE].spans);
+    hits.add(arrows[1], key('h'));
+    hits.add(arrows[3], key('l'));
+    for (offset, c) in ['m', 'o'].into_iter().enumerate() {
+        let goal_row = row(FIRST_GOAL_LINE + offset);
+        // Skip the label column so the row starts at the key.
+        let skip = u16::try_from(LABEL_WIDTH).unwrap_or(u16::MAX);
+        let goal_row = Rect {
+            x: goal_row.x.saturating_add(skip),
+            width: goal_row.width.saturating_sub(skip),
+            ..goal_row
+        };
+        hits.add(goal_row, key(c));
+    }
 }

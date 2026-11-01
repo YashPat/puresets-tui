@@ -2,6 +2,7 @@
 
 use ratatui::{
     Frame,
+    crossterm::event::{KeyCode, KeyEvent},
     layout::{Constraint, Layout, Position, Rect},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Padding, Paragraph, Wrap},
@@ -10,7 +11,7 @@ use ratatui::{
 use super::{
     HitMap,
     theme::Theme,
-    widgets::{Row, centered, fit, status_text},
+    widgets::{Row, centered, fit, row_in, span_areas, status_text, wrapped_row},
 };
 use crate::{
     app::{
@@ -24,6 +25,9 @@ const SHEET_WIDTH: u16 = 80;
 const SHEET_HEIGHT: u16 = 30;
 const LABEL_WIDTH: usize = 8;
 const NAME_WIDTH: usize = 30;
+/// Lines of the sets step, for placing click targets.
+const NOTE_LINE: u16 = 1;
+const COUNT_LINE: u16 = 3;
 
 pub fn draw(
     frame: &mut Frame<'_>,
@@ -58,16 +62,14 @@ pub fn draw(
     let inner = block.inner(rect);
     frame.render_widget(Clear, rect);
     frame.render_widget(block, rect);
+    hits.add(rect, MouseTarget::Modal);
 
     match &sheet.step {
-        Step::Pick => {
-            let list = draw_pick(frame, inner, sheet, tracker, theme);
-            hits.add(list, MouseTarget::LogList);
-        }
-        Step::Sets(sets) => draw_sets(frame, inner, sets, tracker, week, theme),
+        Step::Pick => draw_pick(frame, inner, sheet, tracker, hits, theme),
+        Step::Sets(sets) => draw_sets(frame, inner, sets, tracker, week, hits, theme),
         Step::Note(editor) => draw_note(frame, inner, editor, theme),
-        Step::Create(form) => draw_create(frame, inner, form, theme),
-        Step::ConfirmDelete { exercise } => draw_confirm(frame, inner, exercise, theme),
+        Step::Create(form) => draw_create(frame, inner, form, hits, theme),
+        Step::ConfirmDelete { exercise } => draw_confirm(frame, inner, exercise, hits, theme),
     }
 }
 
@@ -117,8 +119,9 @@ fn draw_pick(
     area: Rect,
     sheet: &mut LogSheet,
     tracker: &Tracker,
+    hits: &mut HitMap,
     theme: Theme,
-) -> Rect {
+) {
     let [search, filter, _, list] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -148,10 +151,13 @@ fn draw_pick(
         ]),
         filter,
     );
+    hits.add(filter, key(KeyCode::Tab));
 
     let rows = sheet.rows(tracker);
     let selected = sheet.selected.min(rows.len().saturating_sub(1));
     let mut items = Vec::new();
+    // The pick row each list item shows; headers and spacers have none.
+    let mut item_rows = Vec::new();
     let mut selected_item = 0;
     let mut section = None;
     let has_exercises = rows
@@ -159,6 +165,11 @@ fn draw_pick(
         .any(|row| matches!(row, PickRow::Exercise { .. }));
     for (index, row) in rows.iter().enumerate() {
         let is_selected = index == selected;
+        let style = if is_selected {
+            Row::Selected
+        } else {
+            Row::Plain
+        };
         match row {
             PickRow::Exercise {
                 exercise,
@@ -174,15 +185,12 @@ fn draw_pick(
                     )));
                     section = Some(*row_section);
                 }
+                item_rows.resize(items.len(), None);
+                item_rows.push(Some(index));
                 if is_selected {
                     selected_item = items.len();
                 }
-                let row = if is_selected {
-                    Row::Selected
-                } else {
-                    Row::Plain
-                };
-                items.push(ListItem::new(exercise_line(exercise, row, theme)));
+                items.push(ListItem::new(exercise_line(exercise, style, theme)));
             }
             PickRow::NewCustom => {
                 items.push(ListItem::new(""));
@@ -198,12 +206,9 @@ fn draw_pick(
                 if is_selected {
                     selected_item = items.len();
                 }
-                let row = if is_selected {
-                    Row::Selected
-                } else {
-                    Row::Plain
-                };
-                items.push(ListItem::new(new_custom_line(&sheet.query, row, theme)));
+                item_rows.resize(items.len(), None);
+                item_rows.push(Some(index));
+                items.push(ListItem::new(new_custom_line(&sheet.query, style, theme)));
             }
         }
     }
@@ -213,7 +218,26 @@ fn draw_pick(
     }
     sheet.list.select(Some(selected_item));
     frame.render_stateful_widget(List::new(items), list, &mut sheet.list);
-    list
+    add_row_hits(
+        hits,
+        list,
+        &item_rows[sheet.list.offset().min(item_rows.len())..],
+    );
+}
+
+/// Makes each visible exercise row clickable; `visible` starts at the top item.
+fn add_row_hits(hits: &mut HitMap, list: Rect, visible: &[Option<usize>]) {
+    // Every item is one line tall, so screen rows map straight to items.
+    for (y, row) in (0..list.height).zip(visible) {
+        if let Some(row) = *row {
+            hits.add(row_in(list, y), MouseTarget::LogRow(row));
+        }
+    }
+}
+
+/// A target that does what `code` does.
+fn key(code: KeyCode) -> MouseTarget {
+    MouseTarget::Key(KeyEvent::from(code))
 }
 
 /// The "+ Create" row at the end of the list.
@@ -279,6 +303,7 @@ fn draw_sets(
     sets: &SetCount,
     tracker: &Tracker,
     week: Week,
+    hits: &mut HitMap,
     theme: Theme,
 ) {
     let Some(exercise) = tracker.catalog.get(&sets.exercise) else {
@@ -304,6 +329,17 @@ fn draw_sets(
     } else {
         "hard sets"
     };
+    hits.add(row_in(area, NOTE_LINE), key(KeyCode::Char('n')));
+    let arrows = span_areas(
+        row_in(area, COUNT_LINE),
+        &[
+            Span::raw("‹ "),
+            Span::raw(format!("{:>2}", sets.count)),
+            Span::raw(" ›"),
+        ],
+    );
+    hits.add(arrows[0], key(KeyCode::Down));
+    hits.add(arrows[2], key(KeyCode::Up));
     lines.push(Line::from(vec![
         Span::styled(
             "‹ ",
@@ -398,7 +434,13 @@ fn draw_note(frame: &mut Frame<'_>, area: Rect, editor: &NoteEditor, theme: Them
     );
 }
 
-fn draw_create(frame: &mut Frame<'_>, area: Rect, form: &CreateForm, theme: Theme) {
+fn draw_create(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    form: &CreateForm,
+    hits: &mut HitMap,
+    theme: Theme,
+) {
     let [name, _, heading, _, grid, _, legend, error] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -444,7 +486,8 @@ fn draw_create(frame: &mut Frame<'_>, area: Rect, form: &CreateForm, theme: Them
             category.name().to_uppercase(),
             theme.category(category),
         )];
-        for muscle in category.muscles() {
+        for (row, muscle) in (1..).zip(category.muscles()) {
+            hits.add(row_in(*column, row), MouseTarget::CreateMuscle(muscle));
             let at_cursor = name_focus == Focus::Off && form.cursor == muscle;
             let (symbol, symbol_style) = match form.role(muscle) {
                 Some(Role::Primary) => ("● ", theme.success()),
@@ -481,7 +524,13 @@ fn draw_create(frame: &mut Frame<'_>, area: Rect, form: &CreateForm, theme: Them
     }
 }
 
-fn draw_confirm(frame: &mut Frame<'_>, area: Rect, exercise: &str, theme: Theme) {
+fn draw_confirm(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    exercise: &str,
+    hits: &mut HitMap,
+    theme: Theme,
+) {
     let lines = vec![
         Line::from(vec![
             Span::styled("Delete ", theme.text()),
@@ -501,5 +550,10 @@ fn draw_confirm(frame: &mut Frame<'_>, area: Rect, exercise: &str, theme: Theme)
             Span::styled("keep it", theme.text()),
         ]),
     ];
+    let answers = lines.len() - 1;
+    let row = row_in(area, wrapped_row(&lines, answers, area.width));
+    let spans = span_areas(row, &lines[answers].spans);
+    hits.add(spans[0].union(spans[1]), key(KeyCode::Char('y')));
+    hits.add(spans[2].union(spans[3]), key(KeyCode::Char('n')));
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), area);
 }

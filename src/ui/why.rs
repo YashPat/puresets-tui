@@ -64,7 +64,7 @@ fn draw_text(
             ..area
         };
         frame.render_widget(
-            Line::styled("↓ more (j/k to scroll)", theme.dim()).right_aligned(),
+            Line::styled("↓ more (j/k or scroll)", theme.dim()).right_aligned(),
             more,
         );
     }
