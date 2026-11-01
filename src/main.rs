@@ -48,7 +48,8 @@ Usage: puresets-tui [OPTIONS]
 
 Options:
   --data <PATH>   Use this data file (default: $PURESETS_DATA, or the
-                  platform data directory, e.g. ~/Library/Application Support/puresets/data.json)
+                  platform data directory, e.g. ~/Library/Application Support/puresets/data.json;
+                  debug builds use puresets-dev instead of puresets)
   --summary       Print this week's sets as plain text and exit
   -h, --help      Print this help
   -V, --version   Print the version

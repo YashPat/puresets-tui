@@ -36,7 +36,7 @@ puresets-tui --summary
 
 | Setting | How |
 |---|---|
-| Data file | `--data PATH`, or the `PURESETS_DATA` environment variable. The default is the platform data directory, e.g. `~/Library/Application Support/puresets/data.json` on macOS or `~/.local/share/puresets/data.json` on Linux. |
+| Data file | `--data PATH`, or the `PURESETS_DATA` environment variable. The default is the platform data directory, e.g. `~/Library/Application Support/puresets/data.json` on macOS or `~/.local/share/puresets/data.json` on Linux. Debug builds (`cargo run`) use `puresets-dev` in place of `puresets`, so development never touches your installed data. |
 | Weekly target | Settings screen (4 to 20 sets per muscle) |
 | Colour | Set `NO_COLOR=1`, or use `TERM=dumb`, for monochrome output |
 | Motion | Bars, toasts and the on-target flash animate briefly (under 400 ms). Set `PURESETS_NO_ANIMATION=1`, or use `TERM=dumb`, to show changes at once |

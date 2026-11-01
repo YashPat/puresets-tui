@@ -131,6 +131,9 @@ impl Storage {
 
     /// The location from `PURESETS_DATA`, or the platform data directory.
     ///
+    /// Debug builds (`cargo run`, `cargo test`) use `puresets-dev` instead of
+    /// `puresets`, so development never touches the installed app's data.
+    ///
     /// # Errors
     ///
     /// Fails if the platform has no data directory and no override is set.
@@ -140,7 +143,12 @@ impl Storage {
         }
         let base = dirs::data_dir()
             .ok_or_else(|| eyre!("no data directory on this platform; set {DATA_ENV}"))?;
-        Ok(Self::new(base.join("puresets").join("data.json")))
+        let dir = if cfg!(debug_assertions) {
+            "puresets-dev"
+        } else {
+            "puresets"
+        };
+        Ok(Self::new(base.join(dir).join("data.json")))
     }
 
     pub fn path(&self) -> &Path {
