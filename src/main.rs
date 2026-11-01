@@ -29,13 +29,17 @@ use ratatui::{
     layout::Position,
 };
 
-use app::{App, MouseAction, ToastKind};
+use app::{App, Motion, MouseAction, ToastKind};
 use domain::{Catalog, Muscle, Week};
 use storage::{DATA_ENV, Loaded, SaveError, Storage, Unparseable};
 use ui::{HitMap, Theme};
 
 /// How long to wait for input before refreshing the clock and toasts.
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
+/// Time between frames while something animates, about 60 per second.
+const FRAME_INTERVAL: Duration = Duration::from_millis(16);
+/// Set to anything non-empty to turn animations off.
+const NO_ANIMATION_ENV: &str = "PURESETS_NO_ANIMATION";
 
 const USAGE: &str = "\
 PureSets: track weekly hard sets per muscle group.
@@ -157,6 +161,7 @@ fn run_interactive(storage: &mut Storage, loaded: Loaded) -> Result<()> {
     } = loaded;
     let today = jiff::Zoned::now().date();
     let mut app = App::new(tracker, today, Instant::now(), display_path(storage.path()));
+    app.motion = motion_from_env();
     if let Some(backup) = backup {
         let name = backup.file_name().unwrap_or(backup.as_os_str());
         app.notify(
@@ -189,6 +194,17 @@ fn run_interactive(storage: &mut Storage, loaded: Loaded) -> Result<()> {
     result
 }
 
+/// Animations stay off on `dumb` terminals and when the user asks.
+fn motion_from_env() -> Motion {
+    let asked = std::env::var_os(NO_ANIMATION_ENV).is_some_and(|value| !value.is_empty());
+    let dumb = std::env::var("TERM").is_ok_and(|term| term == "dumb");
+    if asked || dumb {
+        Motion::Off
+    } else {
+        Motion::On
+    }
+}
+
 fn disable_enhancements() {
     let _ = execute!(io::stdout(), DisableMouseCapture, DisableBracketedPaste);
 }
@@ -199,15 +215,28 @@ fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &mut Stora
     let mut hits = HitMap::default();
     let mut redraw = true;
     let mut last_draw = Instant::now();
+    // Whether the last frame drawn was mid-animation; if so the next one
+    // must be drawn too, to show where the animation ended.
+    let mut moving = false;
     while !app.should_quit() {
         // Events that change nothing, such as mouse moves, skip the redraw
         // until the clock is due for one.
-        if redraw || last_draw.elapsed() >= POLL_INTERVAL {
+        if redraw || moving || app.is_animating() || last_draw.elapsed() >= POLL_INTERVAL {
+            moving = app.is_animating();
             terminal.draw(|frame| hits = ui::draw(frame, app, theme))?;
             last_draw = Instant::now();
         }
         redraw = false;
-        if event::poll(POLL_INTERVAL)? {
+        // Frames come quickly only while something moves; otherwise the app
+        // sleeps until input or the clock needs it.
+        let wait = if moving {
+            FRAME_INTERVAL
+        } else {
+            POLL_INTERVAL
+        };
+        if event::poll(wait)? {
+            // Animations start from the moment of the event, not the last tick.
+            app.tick(Instant::now(), jiff::Zoned::now().date());
             // Skim past ignored events, but redraw after any that acted, so
             // the next click is hit-tested against what is on screen.
             loop {

@@ -11,11 +11,11 @@ use ratatui::{
 use super::{
     HitMap,
     theme::Theme,
-    widgets::{Row, fit, set_bar, set_bar_width, span_areas, status_text},
+    widgets::{Row, fill_bar, fit, set_bar_width, span_areas, status_text},
 };
 use crate::{
-    app::{App, MouseTarget},
-    domain::{Category, Muscle, Sets, Target},
+    app::{App, Fill, MouseTarget},
+    domain::{Category, Muscle, ProgressLevel, Sets, Target},
 };
 
 /// Width at which the categories are shown in two columns.
@@ -184,7 +184,11 @@ fn category_lines(app: &App, categories: &[Category], width: u16, theme: Theme) 
             } else {
                 Row::Plain
             };
-            lines.push(muscle_row(muscle, sets, target, row, width, theme));
+            let bar = Bar {
+                sets,
+                fill: app.bar_fill(muscle),
+            };
+            lines.push(muscle_row(muscle, bar, target, row, width, theme));
         }
     }
     CategoryLines {
@@ -214,9 +218,16 @@ fn category_header(
     ])
 }
 
+/// A muscle's sets, and how far its bar is drawn while it moves to them.
+#[derive(Debug, Clone, Copy)]
+struct Bar {
+    sets: Sets,
+    fill: Fill,
+}
+
 fn muscle_row(
     muscle: Muscle,
-    sets: Sets,
+    Bar { sets, fill }: Bar,
     target: Target,
     row: Row,
     width: u16,
@@ -230,7 +241,8 @@ fn muscle_row(
         Span::styled(fit(muscle.name(), NAME_WIDTH), row.style(theme)),
     ];
     if bar_room >= set_bar_width(target, 0) {
-        spans.extend(set_bar(sets, target, bar_room, theme));
+        let level = ProgressLevel::of(sets, target);
+        spans.extend(fill_bar(fill, level, target, bar_room, theme));
     }
     let count_style = if sets.is_zero() {
         theme.dim()

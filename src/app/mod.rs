@@ -3,6 +3,7 @@
 //! [`App::take_dirty`] says the data changed.
 
 mod log_sheet;
+mod motion;
 mod text_input;
 
 use std::time::{Duration, Instant};
@@ -11,15 +12,19 @@ use jiff::civil::Date;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub use log_sheet::{CreateForm, Field, LogSheet, MAX_SETS, NoteEditor, PickRow, SetCount, Step};
+pub use motion::{Fill, Motion};
 pub use text_input::TextInput;
 
 use crate::domain::{
     Change, Direction, Goal, Muscle, Period, Sets, Target, Tracker, Week, WeekSets,
 };
 use log_sheet::SheetEvent;
+use motion::{BarMove, Tween};
 
 const TOAST_DURATION: Duration = Duration::from_secs(4);
 const UNDO_LIMIT: usize = 20;
+/// How long a Home bar takes to reach a new set count.
+const BAR_DURATION: Duration = Duration::from_millis(220);
 /// Lines the Why text moves per scroll-wheel step.
 const WHEEL_LINES: u16 = 3;
 
@@ -137,9 +142,12 @@ pub struct App {
     /// The clickable thing under the pointer; see [`App::hover`].
     pub hovered: Option<MouseTarget>,
     pub data_path: String,
+    pub motion: Motion,
     today: Date,
     now: Instant,
     undo: Vec<UndoEntry>,
+    /// Bars still moving to a new count, by the week and muscle they show.
+    bars: Vec<(Week, Muscle, BarMove)>,
     dirty: bool,
     quit: bool,
 }
@@ -161,9 +169,11 @@ impl App {
             toast: None,
             hovered: None,
             data_path,
+            motion: Motion::default(),
             today,
             now,
             undo: Vec::new(),
+            bars: Vec::new(),
             dirty: false,
             quit: false,
         }
@@ -200,9 +210,26 @@ impl App {
         !self.undo.is_empty()
     }
 
-    /// Advances the clock: expires toasts and follows the calendar into a new week.
+    /// Whether something is mid-transition, so frames should come quickly.
+    pub fn is_animating(&self) -> bool {
+        let now = self.now;
+        self.bars.iter().any(|(.., bar)| bar.tween.is_running(now))
+    }
+
+    /// How full a muscle's bar on Home is drawn right now.
+    pub fn bar_fill(&self, muscle: Muscle) -> Fill {
+        let current = Fill::from(self.tracker.log.sets(self.week, muscle));
+        self.bars
+            .iter()
+            .find(|&&(week, m, _)| week == self.week && m == muscle)
+            .map_or(current, |(.., bar)| bar.at(current, self.now))
+    }
+
+    /// Advances the clock: ends transitions, expires toasts and follows the
+    /// calendar into a new week.
     pub fn tick(&mut self, now: Instant, today: Date) {
         self.now = now;
+        self.bars.retain(|(.., bar)| bar.tween.is_running(now));
         if self
             .toast
             .as_ref()
@@ -520,6 +547,7 @@ impl App {
             ToastKind::Success,
             format!("Logged {label}  ·  {}  ·  u to undo", summary.join(", ")),
         );
+        self.animate_change(self.week, &before);
         self.push_undo(before, label);
     }
 
@@ -532,7 +560,34 @@ impl App {
         if after == before_sets {
             return;
         }
+        self.animate_change(self.week, &before);
         self.push_undo(before, format!("{muscle} {before_sets} → {after}"));
+    }
+
+    /// Starts a bar move for every muscle whose sets in `week` differ from
+    /// `before`. A bar already moving starts again from where it is drawn.
+    fn animate_change(&mut self, week: Week, before: &WeekSets) {
+        if self.motion == Motion::Off {
+            return;
+        }
+        let now = self.now;
+        for muscle in Muscle::ALL {
+            let old = before.get(&muscle).copied().unwrap_or_default();
+            if self.tracker.log.sets(week, muscle) == old {
+                continue;
+            }
+            let mut from = Fill::from(old);
+            if let Some(index) = self
+                .bars
+                .iter()
+                .position(|&(w, m, _)| w == week && m == muscle)
+            {
+                let (.., bar) = self.bars.swap_remove(index);
+                from = bar.at(from, now);
+            }
+            let tween = Tween::new(now, BAR_DURATION);
+            self.bars.push((week, muscle, BarMove { from, tween }));
+        }
     }
 
     fn push_undo(&mut self, before: WeekSets, label: String) {
@@ -552,7 +607,9 @@ impl App {
             self.notify(ToastKind::Info, "Nothing to undo.");
             return;
         };
+        let undone = self.tracker.log.week(entry.week);
         self.tracker.log.restore(entry.week, entry.before);
+        self.animate_change(entry.week, &undone);
         self.week = entry.week;
         self.dirty = true;
         self.notify(ToastKind::Info, format!("Undid {}.", entry.label));
@@ -823,6 +880,56 @@ mod tests {
         assert_eq!(app.target(), Target::new(10).unwrap());
         press(&mut app, &[KeyCode::Char('o')]);
         assert_eq!(app.target(), Goal::Optimal.target());
+    }
+
+    #[test]
+    fn bars_move_to_a_new_count_over_time() {
+        let mut app = onboarded();
+        let start = app.now;
+        let today = date(2026, 11, 1);
+        press(&mut app, &[KeyCode::Char('+')]);
+        assert!(app.is_animating());
+        assert_eq!(app.bar_fill(Muscle::Chest), Fill::default(), "starts empty");
+        assert_eq!(
+            app.bar_fill(Muscle::Triceps),
+            Fill::default(),
+            "only the changed muscle moves"
+        );
+
+        app.tick(start + BAR_DURATION / 2, today);
+        let middle = app.bar_fill(Muscle::Chest);
+        assert!(
+            Fill::default() < middle && middle < Fill::from(Sets::ONE),
+            "halfway the bar is part filled: {middle:?}"
+        );
+
+        // A second change mid-move starts from where the bar is drawn.
+        press(&mut app, &[KeyCode::Char('+')]);
+        assert_eq!(app.bar_fill(Muscle::Chest), middle);
+
+        app.tick(start + BAR_DURATION * 2, today);
+        assert!(!app.is_animating());
+        assert_eq!(app.bar_fill(Muscle::Chest), Fill::from(Sets::whole(2)));
+
+        press(&mut app, &[KeyCode::Char('u')]);
+        assert!(app.is_animating(), "undo moves the bar back too");
+    }
+
+    #[test]
+    fn logging_moves_every_credited_bar_unless_motion_is_off() {
+        let mut app = onboarded();
+        app.open_log(None);
+        type_text(&mut app, "bench press");
+        press(&mut app, &[KeyCode::Enter, KeyCode::Enter]);
+        assert!(sets(&app, Muscle::Triceps) > Sets::ZERO);
+        assert_eq!(app.bar_fill(Muscle::Chest), Fill::default());
+        assert_eq!(app.bar_fill(Muscle::Triceps), Fill::default());
+
+        let mut still = onboarded();
+        still.motion = Motion::Off;
+        press(&mut still, &[KeyCode::Char('+')]);
+        assert!(!still.is_animating());
+        assert_eq!(still.bar_fill(Muscle::Chest), Fill::from(Sets::ONE));
     }
 
     #[test]

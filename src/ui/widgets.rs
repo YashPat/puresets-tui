@@ -10,7 +10,10 @@ use ratatui::{
 };
 
 use super::theme::Theme;
-use crate::domain::{ProgressLevel, Sets, Target};
+use crate::{
+    app::Fill,
+    domain::{ProgressLevel, Sets, Target},
+};
 
 /// Whether a list row has the cursor on it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,17 +42,34 @@ impl Row {
 /// Extra segments drawn past the target, as in the iOS app.
 const BAR_BUFFER: u32 = 3;
 
+/// Left-to-right eighth blocks for a partly filled cell, one eighth to seven.
+const PARTIAL: [&str; 7] = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+
 /// A segmented progress bar: one segment per set, a `│` after the target.
 ///
 /// Uses two cells per set when `width` allows, otherwise one. Half sets are
 /// drawn as a half block. Fill colour shows the progress level, but the
 /// numbers beside the bar carry the same information.
 pub fn set_bar(sets: Sets, target: Target, width: u16, theme: Theme) -> Vec<Span<'static>> {
+    let level = ProgressLevel::of(sets, target);
+    fill_bar(Fill::from(sets), level, target, width, theme)
+}
+
+/// [`set_bar`] filled to `fill`, which falls between half sets while the bar
+/// moves; a partly filled cell is drawn as an eighth block.
+pub fn fill_bar(
+    fill: Fill,
+    level: ProgressLevel,
+    target: Target,
+    width: u16,
+    theme: Theme,
+) -> Vec<Span<'static>> {
     let target_sets = u32::from(target.get());
     let segments = target_sets + BAR_BUFFER;
     let available = u32::from(width).saturating_sub(1); // the target marker
     let cells_per_set = if available >= segments * 2 { 2 } else { 1 };
-    let fill = theme.level(ProgressLevel::of(sets, target));
+    let per_cell = Fill::PER_SET / cells_per_set;
+    let filled_style = theme.level(level);
     let empty = theme.dim();
 
     // Adjacent cells with the same style share a span.
@@ -61,22 +81,21 @@ pub fn set_bar(sets: Sets, target: Target, width: u16, theme: Theme) -> Vec<Span
         }) if *last == style => content.to_mut().push_str(text),
         _ => spans.push(Span::styled(text, style)),
     };
-    let halves = sets.halves();
-    for segment in 0..segments {
-        if segment == target_sets {
+    for cell in 0..segments * cells_per_set {
+        if cell == target_sets * cells_per_set {
             push("│", theme.bold());
         }
-        let filled_halves = halves.saturating_sub(segment * 2).min(2);
-        match (cells_per_set, filled_halves) {
-            (2, 2) => push("██", fill),
-            (2, 1) => {
-                push("█", fill);
-                push("░", empty);
+        let filled = fill
+            .sixteenths()
+            .saturating_sub(cell * per_cell)
+            .min(per_cell);
+        match filled * 8 / per_cell {
+            0 => push("░", empty),
+            8 => push("█", filled_style),
+            eighths => {
+                let glyph = usize::try_from(eighths - 1).map_or("▌", |index| PARTIAL[index]);
+                push(glyph, filled_style);
             }
-            (2, _) => push("░░", empty),
-            (_, 2) => push("█", fill),
-            (_, 1) => push("▌", fill),
-            _ => push("░", empty),
         }
     }
     spans
@@ -215,6 +234,25 @@ mod tests {
     fn bar_falls_back_to_one_cell_per_set() {
         assert_eq!(bar(5, 4, 10), "██▌░│░░░");
         assert_eq!(bar(40, 4, 10), "████│███", "overflow fills the bar");
+    }
+
+    #[test]
+    fn a_moving_bar_fills_part_of_a_cell() {
+        let target = Target::new(4).unwrap();
+        let drawn = |sixteenths: u32| -> String {
+            fill_bar(
+                Fill::from_sixteenths(sixteenths),
+                ProgressLevel::Low,
+                target,
+                10,
+                Theme::MONO,
+            )
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect()
+        };
+        assert_eq!(drawn(16 + 4), "█▎░░│░░░", "a quarter of the second set");
+        assert_eq!(drawn(16 + 14), "█▉░░│░░░");
     }
 
     #[test]
