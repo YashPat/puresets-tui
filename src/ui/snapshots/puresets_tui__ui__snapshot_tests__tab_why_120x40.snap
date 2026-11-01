@@ -1,0 +1,44 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings                                                 target 10 sets/wk
+
+  Simple enough to keep doing                                         Muscle growth vs weekly sets
+                                                                      12%│              ⢸                          ⢀⡠⠔
+  Most training logs ask for weight, reps, rest and effort on            │              ⢸                      ⢀⠤⠒⠉⠁
+  every set. That detail is useful, but it is also why so many           │              ⢸                  ⣀⠤⠒⠉⠁
+  people stop logging. PureSets tracks one thing: how many hard          │              ⢸              ⣀⠤⠒⠉
+  sets each muscle got this week.                                        │              ⢸          ⣀⠤⠒⠉              ⣀
+                                                                         │              ⢸       ⡠⠒⠉            ⢀⡠⠤⠒⠊⠉
+  Simplicity enables consistency, and consistency is what builds         │              ⢸    ⡠⠔⠉         ⢀⣀⠤⠔⠒⠉⠁
+  muscle.                                                                │              ⢸⢀⡠⠔⠉      ⢀⣀⠤⠔⠒⠉⠁
+                                                                      6% │             ⡠⢸⠁     ⣀⠤⠒⠉⠁
+  What counts as a hard set                                              │          ⡠⠔⠉ ⢸ ⢀⡠⠔⠒⠉                ⢀⣀⣀⠤⠔⠒⠒
+                                                                         │        ⡠⠊  ⢀⡠⠔⠊⠁          ⣀⣀⣀⠤⠔⠒⠒⠊⠉⠉⠁
+  A set taken close to failure: the last few reps are a real             │      ⡠⠊ ⣀⠔⠊⠁ ⢸     ⣀⡠⠤⠒⠒⠊⠉
+  struggle. Warm-ups and easy sets do not count.                         │    ⡠⠊⡠⠔⠊   ⢀⣀⢸⠔⠒⠉⠉⠉
+                                                                         │  ⢀⢀⡠⠊ ⣀⡠⠔⠒⠉⠁ ⢸
+  The research                                                           │ ⢀⠔⠁⠔⠊⠉       ⢸
+                                                                      0% │⡠⠃⠉           ⢸                    sets/week
+  A 2025 meta-regression of resistance-training studies modelled         └────────────────────────────────────────────
+  muscle growth against weekly sets per muscle. Growth keeps             0                10         20             30
+  rising with volume, but each extra set adds less: the curve         faint lines: 95% credible interval
+  flattens past roughly 12 sets a week.
+
+  PureSets is inspired by this research, not trying to prescribe.
+  Pick a target you can sustain and recover from.
+
+  Source  https://link.springer.com/10.1007/s40279-025-02344-w
+
+  How logging works
+
+  1  Press enter on Home (or a to search everything).
+  2  Type to find the exercise you did.
+  3  Press enter, then choose how many hard sets.
+  4  Press enter to log. Every muscle it works is credited.
+  5  Check Home for what still needs work this week.
+
+  Primary movers get one set per set performed. Secondary movers
+  get half, because they help but are not the main target.
+ j/k scroll  ·  tab next screen  ·  ? help  ·  q quit

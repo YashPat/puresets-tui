@@ -210,4 +210,6 @@ fn footer_hints(app: &App) -> Vec<(&'static str, &'static str)> {
 }
 
 #[cfg(test)]
+mod snapshot_tests;
+#[cfg(test)]
 mod tests;

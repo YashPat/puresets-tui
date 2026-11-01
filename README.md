@@ -117,6 +117,12 @@ cargo test
 
 The tests cover the domain rules (credits, weeks, insights, catalog parsing), scripted key sequences through the app state, and headless render tests. The render tests draw real screens into ratatui's `TestBackend` at several sizes, including the minimum, in colour and monochrome.
 
+Snapshot tests (`src/ui/snapshot_tests.rs`) render every tab and every log-sheet step at 80×24 and 120×40 from a seeded tracker on a fixed date, and compare the text with `src/ui/snapshots/`. After an intended UI change, review and accept the new screens with [cargo-insta](https://insta.rs):
+
+```bash
+cargo insta test --review
+```
+
 ### Notes on the shared data
 
 `exercises.json` comes from the iOS app, with its duplicate "Chest Dips" entry removed. A few entries name muscles the app does not track. The catalog maps them to a tracked muscle (`MUSCLE_ALIASES` in `src/domain/catalog.rs`):

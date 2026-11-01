@@ -1,0 +1,28 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings         target 10 sets/wk
+ ╭ Log sets ──────────────────────────────────────────────────────────────────╮
+ │                                                                            │
+ │  Search  press                                                             │
+ │  Muscle  All muscles   tab / shift-tab to change                           │
+ │                                                                            │
+ │  MATCHES                                                                   │
+ │  ▸ Arnold Press                            Front Delts + Lateral Delts     │
+ │    Bench Press                             Chest, Front Delts + Triceps    │
+ │    Chest Press                             Chest, Front Delts + Triceps    │
+ │    Decline Bench Press                     Chest + Triceps, Front Delts    │
+ │    Incline Bench Press                     Chest, Front Delts + Triceps    │
+ │    Leg Press                               Quads, Glutes + Hamstrings      │
+ │    Overhead Press                          Front Delts, Triceps + Abs, Ch  │
+ │    Shoulder Press                          Front Delts + Triceps, Lateral  │
+ │                                                                            │
+ │    + Create “press”                                                        │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ ╰─────────────────────────────────────────────────── Week 45 · Nov 2 – Nov 8 ╯
+ type search  ·  ↑↓ select  ·  ctrl-d delete custom  ·  esc clear

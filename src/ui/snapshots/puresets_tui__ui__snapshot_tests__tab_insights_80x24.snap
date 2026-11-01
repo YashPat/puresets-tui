@@ -1,0 +1,28 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings         target 10 sets/wk
+
+   This week   4 weeks   52 weeks    Nov 2 – Nov 8  ·  88 sets logged
+
+  ╭ Push ─────────────────────────────╮  ╭ Pull ─────────────────────────────╮
+  │ 7 avg/muscle  ·  28.5 total       │  │ 5 avg/muscle  ·  32 total         │
+  │ █████████████████████░░░░░░░░░░░░ │  │ ████████████████░░░░░░░░░░░░░░░░░ │
+  │ 66% of target                     │  │ 51% of target                     │
+  │ 3 muscles below target            │  │ 5 muscles below target            │
+  ╰───────────────────────────────────╯  ╰───────────────────────────────────╯
+  ╭ Legs ─────────────────────────────╮  ╭ Core ─────────────────────────────╮
+  │ 6 avg/muscle  ·  25 total         │  │ 2.5 avg/muscle  ·  2.5 total      │
+  │ ███████████████████░░░░░░░░░░░░░░ │  │ ████████░░░░░░░░░░░░░░░░░░░░░░░░░ │
+  │ 60% of target                     │  │ 25% of target                     │
+  │ 3 muscles below target            │  │ 1 muscle below target             │
+  ╰───────────────────────────────────╯  ╰───────────────────────────────────╯
+
+  SETS THIS WEEK
+
+  Front Delts   ████████████████████│████░░   12 ✓ +2
+  Lower Back    ████████████████████│██░░░░   11 ✓ +1
+  Glutes        ████████████████████│██░░░░   11 ✓ +1
+  Biceps        ██████████████████░░│░░░░░░    9 1 to go
+ h/l period  ·  tab next screen  ·  ? help  ·  q quit

@@ -1,0 +1,28 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings         target 10 sets/wk
+ ╭ Log sets ──────────────────────────────────────────────────────────────────╮
+ │                                                                            │
+ │  Search  type an exercise name                                             │
+ │  Muscle  All muscles   tab / shift-tab to change                           │
+ │                                                                            │
+ │  RECENT                                                                    │
+ │  ▸ Cable Fly                      custom ✎ Chest + Front Delts             │
+ │    Bicep Curl                              Biceps + Forearms               │
+ │    Lateral Raise                           Lateral Delts + Front Delts     │
+ │    Romanian Deadlift                       Hamstrings, Glutes, Lower Back  │
+ │    Pull-up                                 Lats, Biceps + Front Delts, Ab  │
+ │    Bench Press                             Chest, Front Delts + Triceps    │
+ │    Squat                          ✎        Quads, Glutes, Lower Back + Ca  │
+ │                                                                            │
+ │  ALL EXERCISES                                                             │
+ │    Arnold Press                            Front Delts + Lateral Delts     │
+ │    Bench Press                             Chest, Front Delts + Triceps    │
+ │    Bent-Over Row                           Lats, Upper Back, Rear Delts +  │
+ │    Bicep Curl                              Biceps + Forearms               │
+ │    Bulgarian Split Squat                   Quads, Glutes                   │
+ │    Cable Fly                      custom ✎ Chest + Front Delts             │
+ ╰─────────────────────────────────────────────────── Week 45 · Nov 2 – Nov 8 ╯
+ type search  ·  ↑↓ select  ·  ctrl-d delete custom  ·  esc close

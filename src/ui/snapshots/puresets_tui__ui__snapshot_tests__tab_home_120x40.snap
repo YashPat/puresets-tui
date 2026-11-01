@@ -1,0 +1,44 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings                                                 target 10 sets/wk
+
+  ‹ Week 45  Nov 2 – Nov 8 ›   this week                                                    88 sets  ·  3/15 on target
+
+  PUSH  28.5 sets  ·  1/4 on target                           LEGS  25 sets  ·  1/4 on target
+  ▸ Chest         ████████░░│░░░    8 / 10  2 to go             Quads         ██████░░░░│░░░    6 / 10  4 to go
+    Triceps       ██▌░░░░░░░│░░░  2.5 / 10  7.5 to go           Glutes        ██████████│█░░   11 / 10  ✓ +1
+    Front Delts   ██████████│██░   12 / 10  ✓ +2                Hamstrings    █████░░░░░│░░░    5 / 10  5 to go
+    Lateral Delts ██████░░░░│░░░    6 / 10  4 to go             Calves        ███░░░░░░░│░░░    3 / 10  7 to go
+
+  PULL  32 sets  ·  1/6 on target                             CORE  2.5 sets  ·  0/1 on target
+    Forearms      ████▌░░░░░│░░░  4.5 / 10  5.5 to go           Abs           ██▌░░░░░░░│░░░  2.5 / 10  7.5 to go
+    Biceps        █████████░│░░░    9 / 10  1 to go
+    Lats          █████░░░░░│░░░    5 / 10  5 to go
+    Upper Back    ██▌░░░░░░░│░░░  2.5 / 10  7.5 to go
+    Lower Back    ██████████│█░░   11 / 10  ✓ +1
+    Rear Delts    ░░░░░░░░░░│░░░    0 / 10  10 to go
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ enter log  ·  j/k muscle  ·  h/l week  ·  +/- adjust  ·  ? help  ·  q quit

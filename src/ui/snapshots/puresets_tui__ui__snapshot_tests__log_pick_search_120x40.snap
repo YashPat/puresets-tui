@@ -1,0 +1,44 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings                                                 target 10 sets/wk
+
+  ‹ Week 45  Nov 2 – Nov 8 ›   this week                                                    88 sets  ·  3/15 on target
+
+  PUSH  28.5 sets  ·  1/4 on target                           LEGS  25 sets  ·  1/4 on target
+  ▸ Chest         ██╭ Log sets ────────────────────────────────────────────────────────────────────╮10  4 to go
+    Triceps       ██│                                                                              │10  ✓ +1
+    Front Delts   ██│  Search  press                                                               │10  5 to go
+    Lateral Delts ██│  Muscle  All muscles   tab / shift-tab to change                             │10  7 to go
+                    │                                                                              │
+  PULL  32 sets  ·  │  MATCHES                                                                     │
+    Forearms      ██│  ▸ Arnold Press                            Front Delts + Lateral Delts       │10  7.5 to go
+    Biceps        ██│    Bench Press                             Chest, Front Delts + Triceps      │
+    Lats          ██│    Chest Press                             Chest, Front Delts + Triceps      │
+    Upper Back    ██│    Decline Bench Press                     Chest + Triceps, Front Delts      │
+    Lower Back    ██│    Incline Bench Press                     Chest, Front Delts + Triceps      │
+    Rear Delts    ░░│    Leg Press                               Quads, Glutes + Hamstrings        │
+                    │    Overhead Press                          Front Delts, Triceps + Abs, Ches  │
+                    │    Shoulder Press                          Front Delts + Triceps, Lateral D  │
+                    │                                                                              │
+                    │    + Create “press”                                                          │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    ╰───────────────────────────────────────────────────── Week 45 · Nov 2 – Nov 8 ╯
+
+
+
+
+ type search  ·  ↑↓ select  ·  enter choose  ·  tab muscle  ·  ctrl-d delete custom  ·  esc clear

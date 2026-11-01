@@ -1,0 +1,44 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings                                                 target 10 sets/wk
+
+   This week   4 weeks   52 weeks    Nov 2 – Nov 8  ·  88 sets logged
+
+  ╭ Push ────────────────────╮  ╭ Pull ───────────────────╮  ╭ Legs ────────────────────╮  ╭ Core ───────────────────╮
+  │ 7 avg/muscle  ·  28.5 to │  │ 5 avg/muscle  ·  32 tot │  │ 6 avg/muscle  ·  25 tota │  │ 2.5 avg/muscle  ·  2.5  │
+  │ ███████████████░░░░░░░░░ │  │ ███████████░░░░░░░░░░░░ │  │ ██████████████░░░░░░░░░░ │  │ █████░░░░░░░░░░░░░░░░░░ │
+  │ 66% of target            │  │ 51% of target           │  │ 60% of target            │  │ 25% of target           │
+  │ 3 muscles below target   │  │ 5 muscles below target  │  │ 3 muscles below target   │  │ 1 muscle below target   │
+  ╰──────────────────────────╯  ╰─────────────────────────╯  ╰──────────────────────────╯  ╰─────────────────────────╯
+
+  SETS THIS WEEK                                                         SETS PER WEEK
+
+  Front Delts   ████████████████████│████░░   12 ✓ +2                                                     ██
+  Lower Back    ████████████████████│██░░░░   11 ✓ +1                                                     ██
+  Glutes        ████████████████████│██░░░░   11 ✓ +1                                                     ██
+  Biceps        ██████████████████░░│░░░░░░    9 1 to go                                                  ██
+  Chest         ████████████████░░░░│░░░░░░    8 2 to go                                                  ██
+  Lateral Delts ████████████░░░░░░░░│░░░░░░    6 4 to go                                            ▂▂ ▂▂ ██
+  Quads         ████████████░░░░░░░░│░░░░░░    6 4 to go                                            ██ ██ ██
+  Lats          ██████████░░░░░░░░░░│░░░░░░    5 5 to go                                            ██ ██ ██
+  Hamstrings    ██████████░░░░░░░░░░│░░░░░░    5 5 to go                                            ██ ██ ██
+  Forearms      █████████░░░░░░░░░░░│░░░░░░  4.5 5.5 to go                                          ██ ██ ██
+  Calves        ██████░░░░░░░░░░░░░░│░░░░░░    3 7 to go                                      ▇▇ ▇▇ ██ ██ ██
+  Triceps       █████░░░░░░░░░░░░░░░│░░░░░░  2.5 7.5 to go                                    ██ ██ ██ ██ ██
+  Upper Back    █████░░░░░░░░░░░░░░░│░░░░░░  2.5 7.5 to go                                    ██ ██ ██ ██ ██
+  Abs           █████░░░░░░░░░░░░░░░│░░░░░░  2.5 7.5 to go                                    ██ ██ ██ ██ ██
+  Rear Delts    ░░░░░░░░░░░░░░░░░░░░│░░░░░░    0 10 to go                                     ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ ██
+                                                                                              ██ ██ ██ ██ 88
+                                                                         34 35 36 37 38 39 40 41 42 43 44 45
+                                                                         last 12 weeks, by week number
+ h/l period  ·  tab next screen  ·  ? help  ·  q quit

@@ -1,0 +1,28 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings         target 10 sets/wk
+ ╭ New custom exercise ───────────────────────────────────────────────────────╮
+ │                                                                            │
+ │  Name    zercher squat                                                     │
+ │                                                                            │
+ │  Muscles   which muscles does it work?                                     │
+ │                                                                            │
+ │  PUSH              PULL              LEGS              CORE                │
+ │   ○ Chest           ○ Forearms        ○ Quads           ○ Abs              │
+ │   ○ Triceps         ○ Biceps          ○ Glutes                             │
+ │   ○ Front Delts     ○ Lats            ○ Hamstrings                         │
+ │   ○ Lateral Delts   ○ Upper Back      ○ Calves                             │
+ │                     ○ Lower Back                                           │
+ │                     ○ Rear Delts                                           │
+ │                                                                            │
+ │  ● primary, 1 set per set   ◐ secondary, ½ set per set                     │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ │                                                                            │
+ ╰─────────────────────────────────────────────────── Week 45 · Nov 2 – Nov 8 ╯
+ type name  ·  tab muscles  ·  enter create  ·  esc back

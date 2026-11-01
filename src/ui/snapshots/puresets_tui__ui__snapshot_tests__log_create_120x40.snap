@@ -1,0 +1,44 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings                                                 target 10 sets/wk
+
+  ‹ Week 45  Nov 2 – Nov 8 ›   this week                                                    88 sets  ·  3/15 on target
+
+  PUSH  28.5 sets  ·  1/4 on target                           LEGS  25 sets  ·  1/4 on target
+  ▸ Chest         ██╭ New custom exercise ─────────────────────────────────────────────────────────╮10  4 to go
+    Triceps       ██│                                                                              │10  ✓ +1
+    Front Delts   ██│  Name    zercher squat                                                       │10  5 to go
+    Lateral Delts ██│                                                                              │10  7 to go
+                    │  Muscles   which muscles does it work?                                       │
+  PULL  32 sets  ·  │                                                                              │
+    Forearms      ██│  PUSH               PULL              LEGS               CORE                │10  7.5 to go
+    Biceps        ██│   ○ Chest            ○ Forearms        ○ Quads            ○ Abs              │
+    Lats          ██│   ○ Triceps          ○ Biceps          ○ Glutes                              │
+    Upper Back    ██│   ○ Front Delts      ○ Lats            ○ Hamstrings                          │
+    Lower Back    ██│   ○ Lateral Delts    ○ Upper Back      ○ Calves                              │
+    Rear Delts    ░░│                      ○ Lower Back                                            │
+                    │                      ○ Rear Delts                                            │
+                    │                                                                              │
+                    │  ● primary, 1 set per set   ◐ secondary, ½ set per set                       │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    │                                                                              │
+                    ╰───────────────────────────────────────────────────── Week 45 · Nov 2 – Nov 8 ╯
+
+
+
+
+ type name  ·  tab muscles  ·  enter create  ·  esc back
