@@ -262,3 +262,18 @@ fn search_picks_out_the_letters_that_matched() {
         .collect();
     assert_eq!(marked, "^ ^^^      ");
 }
+
+#[test]
+fn insights_shows_the_trend_only_when_the_bar_still_fits() {
+    let mut app = onboarded();
+    app.tab = Tab::Insights;
+    assert!(render(&mut app, 80, 24).contains("8 weeks"));
+    // The widest target leaves no room for both at the narrowest width.
+    app.tab = Tab::Settings;
+    press(&mut app, &[KeyCode::Char('l'); 20]);
+    assert_eq!(app.target().sets(), crate::domain::Sets::whole(20));
+    app.tab = Tab::Insights;
+    let narrow = render(&mut app, MIN_WIDTH, 40);
+    assert!(!narrow.contains("8 weeks"), "{narrow}");
+    assert!(narrow.contains('│'), "the bar keeps its room:\n{narrow}");
+}

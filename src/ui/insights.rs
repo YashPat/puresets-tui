@@ -12,15 +12,17 @@ use ratatui::{
 use super::{
     HitMap,
     theme::Theme,
-    widgets::{fit, set_bar, set_bar_width, span_areas, status_text},
+    widgets::{fit, set_bar, set_bar_width, span_areas, sparkline, status_text},
 };
 use crate::{
     app::{App, MouseTarget},
-    domain::{CategorySummary, Insights, Period, ProgressLevel, Target},
+    domain::{CategorySummary, Insights, Period, ProgressLevel, Sets, Target},
 };
 
 const NAME: usize = 14;
 const HISTORY_WEEKS: usize = 12;
+/// Weeks in each muscle's trend sparkline.
+const TREND_WEEKS: usize = 8;
 const HISTORY_MIN_WIDTH: u16 = 50;
 const CARD_HEIGHT: u16 = 6;
 /// Width needed for the four category cards in a single row.
@@ -56,10 +58,10 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, the
             Constraint::Fill(2),
         ])
         .areas(body);
-        draw_ranked(frame, muscles, &insights, target, theme);
+        draw_ranked(frame, muscles, app, &insights, theme);
         draw_history(frame, history, app, theme);
     } else {
-        draw_ranked(frame, body, &insights, target, theme);
+        draw_ranked(frame, body, app, &insights, theme);
     }
 }
 
@@ -176,33 +178,51 @@ fn draw_card(
     frame.render_widget(Paragraph::new(lines), inner);
 }
 
-fn draw_ranked(
-    frame: &mut Frame<'_>,
-    area: Rect,
-    insights: &Insights,
-    target: Target,
-    theme: Theme,
-) {
+fn draw_ranked(frame: &mut Frame<'_>, area: Rect, app: &App, insights: &Insights, theme: Theme) {
+    let target = app.target();
     let heading = if insights.weeks.len() > 1 {
         "AVERAGE SETS PER WEEK"
     } else {
         "SETS THIS WEEK"
     };
-    let mut lines = vec![Line::styled(heading, theme.heading()), Line::raw("")];
+    let mut lines = vec![Line::styled(heading, theme.heading())];
 
     // Name, count ("12.5 "), status ("✓ on target").
     let fixed = u16::try_from(NAME).unwrap_or(14) + 6 + 12;
-    let bar_room = area.width.saturating_sub(fixed);
+    let mut bar_room = area.width.saturating_sub(fixed);
     let show_bar = bar_room >= set_bar_width(target, 0);
-
+    // The trend takes room only when the bar still fits beside it.
+    let trend_width = u16::try_from(TREND_WEEKS + 1).unwrap_or(9);
+    let show_trend = bar_room >= set_bar_width(target, 0) + trend_width;
+    let trend_weeks: Vec<_> = app.current_week().trailing(TREND_WEEKS).collect();
     if insights.total.is_zero() {
+        lines.push(Line::raw(""));
         lines.push(Line::styled(
             "Nothing logged in this period yet. Log sets from Home with enter.",
             theme.dim(),
         ));
     }
+    // The line above the rows labels the trend column, or stays blank.
+    if show_trend {
+        bar_room -= trend_width;
+        lines.push(Line::styled(
+            format!("{:NAME$}{TREND_WEEKS} weeks", ""),
+            theme.dim(),
+        ));
+    } else {
+        lines.push(Line::raw(""));
+    }
     for (muscle, sets) in insights.ranked() {
         let mut spans = vec![Span::styled(fit(muscle.name(), NAME), theme.text())];
+        if show_trend {
+            let weeks: Vec<Sets> = trend_weeks
+                .iter()
+                .rev()
+                .map(|&week| app.tracker.log.sets(week, muscle))
+                .collect();
+            spans.extend(sparkline(&weeks, target, theme));
+            spans.push(Span::raw(" "));
+        }
         if show_bar {
             spans.extend(set_bar(sets, target, bar_room, theme));
         }

@@ -209,6 +209,32 @@ pub fn fit(text: &str, width: usize) -> String {
     out
 }
 
+/// Sparkline steps, lowest to highest.
+const SPARK: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
+/// One glyph per week, oldest first, scaled so a week at or past the
+/// target is a full block. Empty weeks are a dim floor, so the shape holds
+/// without colour.
+pub fn sparkline(weeks: &[Sets], target: Target, theme: Theme) -> Vec<Span<'static>> {
+    let goal = target.sets().halves().max(1);
+    let top = SPARK.len() - 1;
+    weeks
+        .iter()
+        .map(|sets| {
+            if sets.is_zero() {
+                return Span::styled(SPARK[0].to_string(), theme.dim());
+            }
+            // Any sets lift a week off the floor; only the target reaches the top.
+            let step = if sets.halves() >= goal {
+                top
+            } else {
+                1 + usize::try_from(sets.halves() * 5 / goal).unwrap_or(0)
+            };
+            Span::styled(SPARK[step].to_string(), theme.text())
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,6 +249,19 @@ mod tests {
         .iter()
         .map(|span| span.content.as_ref())
         .collect()
+    }
+
+    #[test]
+    fn sparkline_rises_to_the_target() {
+        let weeks: Vec<Sets> = [0, 1, 8, 16, 30]
+            .into_iter()
+            .map(Sets::from_halves)
+            .collect();
+        let line: String = sparkline(&weeks, Target::new(8).unwrap(), Theme::MONO)
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect();
+        assert_eq!(line, "▁▂▄██");
     }
 
     #[test]
