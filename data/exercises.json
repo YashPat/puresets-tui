@@ -176,11 +176,6 @@
     "secondaryMuscles": ["Chest","Front Delts"]
   },
   {
-    "name": "Chest Dips",
-    "primaryMuscles": ["Triceps"],
-    "secondaryMuscles": ["Chest","Front Delts"]
-  },
-  {
     "name": "Crunches",
     "primaryMuscles": ["Abs"],
   },

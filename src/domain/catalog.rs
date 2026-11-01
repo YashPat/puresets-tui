@@ -7,6 +7,11 @@ use super::{Muscle, Sets};
 /// The exercise list shipped with the iOS app, embedded at build time.
 const BUILT_IN_JSON: &str = include_str!("../../data/exercises.json");
 
+/// Muscle names in `exercises.json` that the app does not track, and the
+/// tracked muscle each one credits instead.
+const MUSCLE_ALIASES: [(&str, Muscle); 2] =
+    [("Shoulders", Muscle::FrontDelts), ("Core", Muscle::Abs)];
+
 /// Whether an exercise ships with the app or was created by the user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Origin {
@@ -208,8 +213,9 @@ impl Catalog {
     /// Parses an exercise list in the iOS app's format.
     ///
     /// The file is read as JSON5 because the app's copy has trailing commas.
-    /// Like the app, muscle names it does not track (such as "Core") are
-    /// skipped, and so are repeated exercise names.
+    /// Untracked muscle names with an alias (such as "Core") credit the
+    /// aliased muscle; other unknown names and repeated exercise names are
+    /// skipped.
     ///
     /// # Errors
     ///
@@ -354,11 +360,21 @@ impl<'a> IntoIterator for &'a Catalog {
     }
 }
 
+/// Resolves a muscle name from `exercises.json`, including its aliases.
+fn resolve_muscle(name: &str) -> Option<Muscle> {
+    Muscle::from_name(name).or_else(|| {
+        MUSCLE_ALIASES
+            .iter()
+            .find(|(alias, _)| alias.eq_ignore_ascii_case(name.trim()))
+            .map(|&(_, muscle)| muscle)
+    })
+}
+
 /// Resolves muscle names, dropping unknown ones and any in `exclude`.
 fn known_muscles(names: &[String], exclude: &[Muscle]) -> Vec<Muscle> {
     let mut muscles: Vec<Muscle> = names
         .iter()
-        .filter_map(|name| Muscle::from_name(name))
+        .filter_map(|name| resolve_muscle(name))
         .filter(|muscle| !exclude.contains(muscle))
         .collect();
     // Keep the file's order (it lists the main mover first), minus repeats.
@@ -408,24 +424,77 @@ mod tests {
         let mut sorted = names.clone();
         sorted.sort();
         sorted.dedup();
-        assert_eq!(
-            names, sorted,
-            "the file repeats \"Chest Dips\"; it is kept once"
-        );
+        assert_eq!(names, sorted, "names are sorted and unique");
     }
 
     #[test]
-    fn unknown_muscles_are_skipped_like_the_ios_app() {
+    fn bundled_list_has_no_repeated_names() {
+        let records: Vec<ExerciseRecord> = json5::from_str(BUILT_IN_JSON).unwrap();
         let catalog = Catalog::built_in().unwrap();
-        // "Overhead Press" lists "Shoulders" and "Core", which are not tracked.
+        assert_eq!(records.len(), catalog.len(), "a name appears twice");
+    }
+
+    #[test]
+    fn bundled_list_names_only_known_or_aliased_muscles() {
+        let records: Vec<ExerciseRecord> = json5::from_str(BUILT_IN_JSON).unwrap();
+        for record in &records {
+            for name in record
+                .primary_muscles
+                .iter()
+                .chain(&record.secondary_muscles)
+            {
+                assert!(
+                    resolve_muscle(name).is_some(),
+                    "{}: unknown muscle {name:?}",
+                    record.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn aliases_resolve_to_tracked_muscles() {
+        assert_eq!(resolve_muscle("Shoulders"), Some(Muscle::FrontDelts));
+        assert_eq!(resolve_muscle(" core "), Some(Muscle::Abs));
+        assert_eq!(resolve_muscle("Chest"), Some(Muscle::Chest));
+        assert_eq!(resolve_muscle("Neck"), None);
+    }
+
+    #[test]
+    fn aliased_muscles_are_credited() {
+        let catalog = Catalog::built_in().unwrap();
+        // "Overhead Press" lists "Shoulders" and "Core".
         let press = catalog.get("Overhead Press").unwrap();
-        assert_eq!(press.primary(), [Muscle::Triceps]);
-        assert_eq!(press.secondary(), [Muscle::Chest]);
+        assert_eq!(press.primary(), [Muscle::FrontDelts, Muscle::Triceps]);
+        assert_eq!(press.secondary(), [Muscle::Abs, Muscle::Chest]);
+
+        let pull_up = catalog.get("Pull-up").unwrap();
+        assert_eq!(pull_up.secondary(), [Muscle::FrontDelts, Muscle::Abs]);
+    }
+
+    #[test]
+    fn alias_already_listed_is_credited_once() {
+        let json = r#"[{
+            "name": "Press",
+            "primaryMuscles": ["Front Delts", "Shoulders"],
+            "secondaryMuscles": ["Shoulders", "Core"]
+        }]"#;
+        let catalog = Catalog::from_json(json).unwrap();
+        let press = catalog.get("Press").unwrap();
+        assert_eq!(press.primary(), [Muscle::FrontDelts]);
+        assert_eq!(press.secondary(), [Muscle::Abs]);
+    }
+
+    #[test]
+    fn unknown_muscles_are_skipped() {
+        let json = r#"[{ "name": "Shrug", "primaryMuscles": ["Upper Back", "Neck"] }]"#;
+        let catalog = Catalog::from_json(json).unwrap();
+        assert_eq!(catalog.get("Shrug").unwrap().primary(), [Muscle::UpperBack]);
     }
 
     #[test]
     fn rejects_exercise_without_primary_muscle() {
-        let json = r#"[{ "name": "Mystery", "primaryMuscles": ["Core"] }]"#;
+        let json = r#"[{ "name": "Mystery", "primaryMuscles": ["Neck"] }]"#;
         assert!(matches!(
             Catalog::from_json(json),
             Err(CatalogError::NoPrimaryMuscles { .. })

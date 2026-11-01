@@ -115,4 +115,11 @@ The tests cover the domain rules (credits, weeks, insights, catalog parsing), sc
 
 ### Notes on the shared data
 
-`exercises.json` comes straight from the iOS app. A few of its entries name muscles the app does not track (`Shoulders`, `Core`). Those credits are skipped, so Overhead Press, for example, credits only Triceps and Chest. "Chest Dips" also appears twice; only the first entry is used. Fixing these in the iOS app's file would fix them in both apps.
+`exercises.json` comes from the iOS app, with its duplicate "Chest Dips" entry removed. A few entries name muscles the app does not track. The catalog maps them to a tracked muscle (`MUSCLE_ALIASES` in `src/domain/catalog.rs`):
+
+| In `exercises.json` | Credited to |
+|---|---|
+| `Shoulders` | Front Delts |
+| `Core` | Abs |
+
+So Overhead Press credits Front Delts and Triceps, plus half sets to Abs and Chest. Any other unknown muscle name is skipped.
