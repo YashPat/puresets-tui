@@ -435,9 +435,10 @@ impl App {
         }
     }
 
-    /// Opens the log sheet, optionally filtered to one muscle.
-    pub fn open_log(&mut self, filter: Option<Muscle>) {
-        self.overlay = Some(Overlay::Log(Box::new(LogSheet::new(filter))));
+    /// Opens the log sheet on all muscles, remembering the muscle it was
+    /// opened from so tab can filter to it.
+    pub fn open_log(&mut self, origin: Option<Muscle>) {
+        self.overlay = Some(Overlay::Log(Box::new(LogSheet::new(origin))));
     }
 
     fn overlay_key(&mut self, overlay: Overlay, key: KeyEvent) -> Option<Overlay> {
@@ -751,9 +752,15 @@ mod tests {
     }
 
     #[test]
-    fn enter_on_home_filters_by_the_selected_muscle() {
+    fn enter_on_home_searches_all_muscles_and_tab_filters_to_the_selected_one() {
         let mut app = onboarded();
         press(&mut app, &[KeyCode::Char('j'), KeyCode::Enter]);
+        let Some(Overlay::Log(sheet)) = &app.overlay else {
+            panic!("log sheet should be open");
+        };
+        assert_eq!(sheet.filter, None);
+
+        press(&mut app, &[KeyCode::Tab]);
         let Some(Overlay::Log(sheet)) = &app.overlay else {
             panic!("log sheet should be open");
         };
@@ -762,6 +769,23 @@ mod tests {
             PickRow::Exercise { exercise, .. } => exercise.works(Muscle::Triceps),
             PickRow::NewCustom => true,
         }));
+    }
+
+    #[test]
+    fn filter_cycle_starts_and_wraps_at_the_origin_muscle() {
+        let mut sheet = LogSheet::new(Some(Muscle::Triceps));
+        let mut tracker = onboarded().tracker;
+        let after = Muscle::ALL[(Muscle::Triceps.index() + 1) % Muscle::ALL.len()];
+        let before =
+            Muscle::ALL[(Muscle::Triceps.index() + Muscle::ALL.len() - 1) % Muscle::ALL.len()];
+        sheet.handle_key(KeyEvent::from(KeyCode::Tab), &mut tracker);
+        sheet.handle_key(KeyEvent::from(KeyCode::Tab), &mut tracker);
+        assert_eq!(sheet.filter, Some(after));
+        sheet.handle_key(KeyEvent::from(KeyCode::BackTab), &mut tracker);
+        sheet.handle_key(KeyEvent::from(KeyCode::BackTab), &mut tracker);
+        assert_eq!(sheet.filter, None);
+        sheet.handle_key(KeyEvent::from(KeyCode::BackTab), &mut tracker);
+        assert_eq!(sheet.filter, Some(before));
     }
 
     #[test]

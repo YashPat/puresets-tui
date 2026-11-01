@@ -148,7 +148,7 @@ fn draw_pick(
         Line::from(vec![
             Span::styled(format!("{:<LABEL_WIDTH$}", "Muscle"), theme.dim()),
             filter_value,
-            Span::styled("   tab / shift-tab to change", theme.dim()),
+            Span::styled(filter_hint(sheet), theme.dim()),
         ]),
         filter,
     );
@@ -238,6 +238,14 @@ fn add_row_hits(hits: &mut HitMap, list: Rect, visible: &[Option<usize>]) {
 }
 
 /// A target that does what `code` does.
+/// Names the muscle tab filters to while the sheet still shows all muscles.
+fn filter_hint(sheet: &LogSheet) -> String {
+    match (sheet.filter, sheet.origin) {
+        (None, Some(muscle)) => format!("   tab for {muscle} only"),
+        _ => "   tab / shift-tab to change".to_owned(),
+    }
+}
+
 fn key(code: KeyCode) -> MouseTarget {
     MouseTarget::Key(KeyEvent::from(code))
 }

@@ -19,6 +19,9 @@ const PAGE: usize = 10;
 pub struct LogSheet {
     pub query: TextInput,
     pub filter: Option<Muscle>,
+    /// The muscle the sheet was opened from, if any. The sheet starts on all
+    /// muscles so typing searches everything; tab filters to this one first.
+    pub origin: Option<Muscle>,
     pub selected: usize,
     /// Scroll position of the exercise list, kept between frames.
     pub list: ListState,
@@ -248,10 +251,11 @@ pub enum SheetEvent {
 }
 
 impl LogSheet {
-    pub fn new(filter: Option<Muscle>) -> Self {
+    pub fn new(origin: Option<Muscle>) -> Self {
         Self {
             query: TextInput::new(NAME_LIMIT),
-            filter,
+            filter: None,
+            origin,
             selected: 0,
             list: ListState::default(),
             step: Step::Pick,
@@ -493,11 +497,18 @@ impl LogSheet {
     }
 
     fn cycle_filter(&mut self, step: isize) {
-        // Positions: 0 is "all muscles", then each muscle in order.
-        let positions = Muscle::ALL.len() + 1;
-        let current = self.filter.map_or(0, |m| m.index() + 1);
+        // Positions: 0 is "all muscles", then each muscle in order, starting
+        // from the origin so the first tab filters to it.
+        let muscles = Muscle::ALL.len();
+        let positions = muscles + 1;
+        let start = self.origin.map_or(0, Muscle::index);
+        let current = self
+            .filter
+            .map_or(0, |m| (m.index() + muscles - start) % muscles + 1);
         let next = current.wrapping_add_signed(step).wrapping_add(positions) % positions;
-        self.filter = next.checked_sub(1).map(|index| Muscle::ALL[index]);
+        self.filter = next
+            .checked_sub(1)
+            .map(|offset| Muscle::ALL[(offset + start) % muscles]);
         self.selected = 0;
     }
 }

@@ -22,7 +22,7 @@ puresets-tui
 ```
 
 1. On first launch, choose a weekly target: **Moderate** (8 sets) or **Optimal** (12 sets).
-2. Press `enter` on a muscle, or `a` to search every exercise.
+2. Press `enter` (or `a`) to search every exercise. Press `tab` to narrow the list to the muscle you came from.
 3. Type to find the exercise, press `enter`, choose how many hard sets, then press `enter` again.
 4. Home shows each muscle's progress toward the target this week.
 
@@ -54,7 +54,7 @@ Press `?` in the app for the full list.
 | Everywhere | `1`–`4`, `tab` / `shift-tab` | Switch screen |
 | | `?` | Help |
 | | `q`, `ctrl-c` | Quit |
-| Home | `enter` | Log sets for the selected muscle |
+| Home | `enter` | Log sets (`tab` in the sheet filters to the selected muscle) |
 | | `a` or `/` | Log sets, searching all exercises |
 | | `j`/`k`, `↑`/`↓` | Select a muscle |
 | | `h`/`l`, `←`/`→` | Previous / next week |
@@ -64,7 +64,7 @@ Press `?` in the app for the full list.
 | | `u` | Undo |
 | Log sheet | type | Search exercises |
 | | `↑`/`↓`, `enter` | Choose an exercise, then set the count (`↑`/`↓` or type a number) |
-| | `tab` | Filter by muscle |
+| | `tab` / `shift-tab` | Filter by muscle, starting with the one you came from |
 | | `n` | Edit the exercise's note |
 | | `ctrl-d` | Delete a custom exercise |
 | | `esc` | Back / close |
