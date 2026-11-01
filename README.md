@@ -39,6 +39,7 @@ puresets-tui --summary
 | Data file | `--data PATH`, or the `PURESETS_DATA` environment variable. The default is the platform data directory, e.g. `~/Library/Application Support/puresets/data.json` on macOS or `~/.local/share/puresets/data.json` on Linux. |
 | Weekly target | Settings screen (4 to 20 sets per muscle) |
 | Colour | Set `NO_COLOR=1`, or use `TERM=dumb`, for monochrome output |
+| Motion | Bars, toasts and the on-target flash animate briefly (under 400 ms). Set `PURESETS_NO_ANIMATION=1`, or use `TERM=dumb`, to show changes at once |
 
 Changes save automatically. The data file is plain JSON, written atomically, so you can back it up, sync it, or edit it while the app is closed. Custom exercises and notes are stored in it too.
 
