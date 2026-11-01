@@ -115,6 +115,16 @@ impl Theme {
         Style::new().add_modifier(Modifier::BOLD | Modifier::REVERSED)
     }
 
+    /// Letters of a name that matched the search. Bold and underlined read
+    /// on any row, selected or not, with or without colour.
+    #[expect(
+        clippy::unused_self,
+        reason = "every style is a method, so call sites read alike"
+    )]
+    pub fn matched(self) -> Style {
+        Style::new().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+    }
+
     pub fn success(self) -> Style {
         self.fg(Color::Green)
     }

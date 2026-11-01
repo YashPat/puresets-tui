@@ -4,6 +4,7 @@ use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
     layout::{Constraint, Layout, Position, Rect},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Padding, Paragraph, Wrap},
 };
@@ -18,7 +19,7 @@ use crate::{
         CreateForm, Field, LogSheet, MAX_SETS, MouseTarget, NoteEditor, PickRow, SetCount, Step,
         TextInput,
     },
-    domain::{Category, Exercise, Muscle, Origin, Role, Tracker, Week},
+    domain::{Category, Exercise, Muscle, Origin, Role, Tracker, Week, fuzzy},
 };
 
 const SHEET_WIDTH: u16 = 80;
@@ -190,7 +191,8 @@ fn draw_pick(
                 if is_selected {
                     selected_item = items.len();
                 }
-                items.push(ListItem::new(exercise_line(exercise, style, theme)));
+                let line = exercise_line(exercise, sheet.query.value(), style, theme);
+                items.push(ListItem::new(line));
             }
             PickRow::NewCustom => {
                 items.push(ListItem::new(""));
@@ -257,14 +259,15 @@ fn new_custom_line(query: &TextInput, row: Row, theme: Theme) -> Line<'static> {
     ])
 }
 
-fn exercise_line(exercise: &Exercise, row: Row, theme: Theme) -> Line<'static> {
-    let marker = row.marker();
-    let name_style = row.style(theme);
-    let mut spans = vec![
-        Span::styled(marker, theme.selected()),
-        Span::styled(fit(exercise.name(), NAME_WIDTH), name_style),
-        Span::raw(" "),
-    ];
+fn exercise_line(exercise: &Exercise, query: &str, row: Row, theme: Theme) -> Line<'static> {
+    let mut spans = vec![Span::styled(row.marker(), theme.selected())];
+    spans.extend(highlighted_name(
+        exercise.name(),
+        query,
+        row.style(theme),
+        theme,
+    ));
+    spans.push(Span::raw(" "));
     let mut tags = Vec::new();
     if exercise.origin() == Origin::Custom {
         tags.push("custom");
@@ -275,6 +278,47 @@ fn exercise_line(exercise: &Exercise, row: Row, theme: Theme) -> Line<'static> {
     spans.push(Span::styled(fit(&tags.join(" "), 9), theme.accent()));
     spans.push(Span::styled(muscle_summary(exercise), theme.dim()));
     Line::from(spans)
+}
+
+/// The name fitted to its column, with the letters that matched the
+/// search picked out.
+fn highlighted_name(name: &str, query: &str, style: Style, theme: Theme) -> Vec<Span<'static>> {
+    let shown = fit(name, NAME_WIDTH);
+    let positions = fuzzy::find(name, query)
+        .map(|found| found.positions)
+        .unwrap_or_default();
+    if positions.is_empty() {
+        return vec![Span::styled(shown, style)];
+    }
+    // `fit` keeps a prefix of the name, then maybe "…" and padding.
+    let kept = shown
+        .chars()
+        .zip(name.chars())
+        .take_while(|(a, b)| a == b)
+        .count();
+    let styled = |run: String, matched: bool| {
+        Span::styled(
+            run,
+            if matched {
+                style.patch(theme.matched())
+            } else {
+                style
+            },
+        )
+    };
+    let mut spans = Vec::new();
+    let mut run = String::new();
+    let mut run_matched = false;
+    for (index, c) in shown.chars().enumerate() {
+        let matched = index < kept && positions.binary_search(&index).is_ok();
+        if matched != run_matched && !run.is_empty() {
+            spans.push(styled(std::mem::take(&mut run), run_matched));
+        }
+        run_matched = matched;
+        run.push(c);
+    }
+    spans.push(styled(run, run_matched));
+    spans
 }
 
 /// "Chest, Triceps + Front Delts": primary muscles, then secondary.

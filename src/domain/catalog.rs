@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::Deserialize;
 
-use super::{Muscle, Sets};
+use super::{Muscle, Sets, fuzzy};
 
 /// The exercise list shipped with the iOS app, embedded at build time.
 const BUILT_IN_JSON: &str = include_str!("../../data/exercises.json");
@@ -110,11 +110,6 @@ impl Exercise {
                 sets: role.credit().saturating_mul(count),
             })
             .collect()
-    }
-
-    fn matches(&self, terms: &[String]) -> bool {
-        let name = self.name.to_lowercase();
-        terms.iter().all(|term| name.contains(term.as_str()))
     }
 }
 
@@ -271,15 +266,18 @@ impl Catalog {
         self.position(name).map(|index| &self.exercises[index])
     }
 
-    /// Exercises whose name contains every word of `query`, optionally only
-    /// those that work `muscle`.
+    /// Exercises whose name holds every word of `query` (see [`fuzzy`]),
+    /// closest matches first, optionally only those that work `muscle`.
     pub fn search(&self, query: &str, muscle: Option<Muscle>) -> Vec<&Exercise> {
-        let terms: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
-        self.exercises
+        let mut found: Vec<(usize, &Exercise)> = self
+            .exercises
             .iter()
             .filter(|exercise| muscle.is_none_or(|m| exercise.works(m)))
-            .filter(|exercise| exercise.matches(&terms))
-            .collect()
+            .filter_map(|exercise| Some((fuzzy::find(&exercise.name, query)?.gaps, exercise)))
+            .collect();
+        // Stable, so equally close names keep the catalog's order.
+        found.sort_by_key(|&(gaps, _)| gaps);
+        found.into_iter().map(|(_, exercise)| exercise).collect()
     }
 
     /// Validates and adds a user-defined exercise, returning its final name.
@@ -533,6 +531,32 @@ mod tests {
         assert!(names("curl", Some(Muscle::Biceps)).len() >= 4);
         assert!(names("curl", Some(Muscle::Quads)).is_empty());
         assert_eq!(names("", None).len(), catalog.len());
+    }
+
+    #[test]
+    fn search_forgives_missing_letters_and_ranks_the_closest_first() {
+        let catalog = Catalog::built_in().unwrap();
+        let names: Vec<&str> = catalog
+            .search("bnch prss", None)
+            .iter()
+            .map(|e| e.name())
+            .collect();
+        assert!(names.contains(&"Bench Press"), "{names:?}");
+        let ranked: Vec<&str> = catalog
+            .search("dl", None)
+            .iter()
+            .map(|e| e.name())
+            .collect();
+        let first_spread = ranked
+            .iter()
+            .position(|name| !name.to_lowercase().contains("dl"))
+            .unwrap_or(ranked.len());
+        assert!(
+            ranked[first_spread..]
+                .iter()
+                .all(|name| !name.to_lowercase().contains("dl")),
+            "names holding the letters together come first: {ranked:?}"
+        );
     }
 
     #[test]

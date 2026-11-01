@@ -203,6 +203,12 @@ fn cells(app: &mut App, theme: Theme) -> Buffer {
 
 /// Whether the cells where `text` first appears are drawn in reverse video.
 fn reversed_at(buffer: &Buffer, text: &str) -> bool {
+    let (x, y) = locate(buffer, text);
+    buffer[(x, y)].modifier.contains(Modifier::REVERSED)
+}
+
+/// The cell where `text` first appears on screen.
+fn locate(buffer: &Buffer, text: &str) -> (u16, u16) {
     let width = buffer.area.width;
     let rows: Vec<String> = (0..buffer.area.height)
         .map(|y| (0..width).map(|x| buffer[(x, y)].symbol()).collect())
@@ -214,7 +220,7 @@ fn reversed_at(buffer: &Buffer, text: &str) -> bool {
         .unwrap_or_else(|| panic!("{text:?} is on screen"));
     let x = u16::try_from(column).unwrap();
     let y = u16::try_from(y).unwrap();
-    buffer[(x, y)].modifier.contains(Modifier::REVERSED)
+    (x, y)
 }
 
 #[test]
@@ -235,4 +241,24 @@ fn reaching_the_target_flashes_without_colour_too() {
         !reversed_at(&cells(&mut still, Theme::MONO), "✓ on target"),
         "no flash with motion off"
     );
+}
+
+#[test]
+fn search_picks_out_the_letters_that_matched() {
+    let mut app = onboarded();
+    press(&mut app, &[KeyCode::Char('a')]);
+    type_text(&mut app, "bnch");
+    let buffer = cells(&mut app, Theme::MONO);
+    let (x, y) = locate(&buffer, "Bench Press");
+    let marked: String = (x..x + 11)
+        .map(|x| {
+            let modifier = buffer[(x, y)].modifier;
+            if modifier.contains(Modifier::BOLD | Modifier::UNDERLINED) {
+                '^'
+            } else {
+                ' '
+            }
+        })
+        .collect();
+    assert_eq!(marked, "^ ^^^      ");
 }

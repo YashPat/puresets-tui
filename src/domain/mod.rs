@@ -2,6 +2,7 @@
 //! weekly set totals and the summaries built from them.
 
 mod catalog;
+pub mod fuzzy;
 mod insights;
 mod log;
 mod muscle;
