@@ -74,6 +74,13 @@ pub enum MouseTarget {
     CreateMuscle(Muscle),
 }
 
+impl MouseTarget {
+    /// Whether a click here does something, so hovering it is worth showing.
+    pub const fn is_clickable(self) -> bool {
+        !matches!(self, Self::Body | Self::Backdrop | Self::Modal)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseAction {
     Click,
@@ -127,6 +134,8 @@ pub struct App {
     pub period: Period,
     pub why_scroll: u16,
     pub toast: Option<Toast>,
+    /// The clickable thing under the pointer; see [`App::hover`].
+    pub hovered: Option<MouseTarget>,
     pub data_path: String,
     today: Date,
     now: Instant,
@@ -150,6 +159,7 @@ impl App {
             period: Period::ThisWeek,
             why_scroll: 0,
             toast: None,
+            hovered: None,
             data_path,
             today,
             now,
@@ -246,6 +256,15 @@ impl App {
                 Tab::Settings => self.settings_key(key),
             },
         }
+    }
+
+    /// Records what the pointer is over; returns whether that changed, so
+    /// moves within one target need no redraw.
+    pub fn hover(&mut self, target: Option<MouseTarget>) -> bool {
+        let target = target.filter(|target| target.is_clickable());
+        let changed = self.hovered != target;
+        self.hovered = target;
+        changed
     }
 
     /// The mouse is an extra: every action here has a key that does the same.

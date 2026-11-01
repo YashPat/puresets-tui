@@ -102,7 +102,29 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App, theme: Theme) -> HitMap {
         }
         None => {}
     }
+    draw_hover(frame, app, &hits, theme);
     hits
+}
+
+/// Underlines the text of every region the hovered target owns. Blank cells
+/// are skipped so a row's padding stays clean.
+fn draw_hover(frame: &mut Frame<'_>, app: &App, hits: &HitMap, theme: Theme) {
+    let Some(hovered) = app.hovered else {
+        return;
+    };
+    let buffer = frame.buffer_mut();
+    for &(area, target) in &hits.regions {
+        if target != hovered {
+            continue;
+        }
+        for position in area.positions() {
+            if let Some(cell) = buffer.cell_mut(position)
+                && cell.symbol() != " "
+            {
+                cell.set_style(theme.hover());
+            }
+        }
+    }
 }
 
 fn draw_too_small(frame: &mut Frame<'_>, area: Rect, theme: Theme) {

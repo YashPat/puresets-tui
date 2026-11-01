@@ -255,13 +255,15 @@ fn handle_event(app: &mut App, hits: &HitMap, event: Event) -> bool {
 
 /// Hit-tests against the frame just drawn, which is what the user clicked on.
 fn handle_mouse(app: &mut App, hits: &HitMap, mouse: MouseEvent) -> bool {
+    let position = Position::new(mouse.column, mouse.row);
     let action = match mouse.kind {
         MouseEventKind::Down(MouseButton::Left) => MouseAction::Click,
         MouseEventKind::ScrollUp => MouseAction::ScrollUp,
         MouseEventKind::ScrollDown => MouseAction::ScrollDown,
+        MouseEventKind::Moved => return app.hover(hits.at(position)),
         _ => return false,
     };
-    let Some(target) = hits.at(Position::new(mouse.column, mouse.row)) else {
+    let Some(target) = hits.at(position) else {
         return false;
     };
     app.handle_mouse(target, action);

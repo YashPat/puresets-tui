@@ -97,6 +97,16 @@ impl Theme {
         }
     }
 
+    /// Laid over whatever is under the pointer. Underline reads the same with
+    /// or without colour and leaves each part's own colours alone.
+    #[expect(
+        clippy::unused_self,
+        reason = "every style is a method, so call sites read alike"
+    )]
+    pub fn hover(self) -> Style {
+        Style::new().add_modifier(Modifier::UNDERLINED)
+    }
+
     #[expect(
         clippy::unused_self,
         reason = "every style is a method, so call sites read alike"

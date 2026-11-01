@@ -10,6 +10,7 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyEvent},
     layout::Position,
+    style::Modifier,
 };
 
 use super::{HitMap, Theme, draw};
@@ -403,4 +404,65 @@ fn too_small_screens_have_no_targets() {
     let mut app = onboarded();
     let (_, hits) = frame(&mut app, 40, 10);
     assert_eq!(hits.at(Position::new(5, 0)), None);
+}
+
+fn underlined(buffer: &Buffer, position: Position) -> bool {
+    buffer[position].modifier.contains(Modifier::UNDERLINED)
+}
+
+#[test]
+fn hovering_a_tab_underlines_only_it() {
+    let mut app = onboarded();
+    let (buffer, hits) = frame(&mut app, 80, 24);
+    let insights = find(&buffer, "Insights", 0).expect("the header names every tab");
+    assert!(app.hover(hits.at(insights)), "a new target needs a redraw");
+    assert_eq!(app.hovered, Some(MouseTarget::Tab(Tab::Insights)));
+    assert!(
+        !app.hover(hits.at(Position::new(insights.x + 2, insights.y))),
+        "moving within the label changes nothing"
+    );
+
+    let (buffer, _) = frame(&mut app, 80, 24);
+    assert!(
+        underlined(&buffer, insights),
+        "the hovered label is underlined"
+    );
+    let settings = find(&buffer, "Settings", 0).expect("the header names every tab");
+    assert!(!underlined(&buffer, settings), "other labels are not");
+}
+
+#[test]
+fn hovering_a_muscle_row_and_a_footer_hint() {
+    let mut app = onboarded();
+    // Onboarding's toast would cover the footer hints.
+    app.toast = None;
+    let (buffer, hits) = frame(&mut app, 80, 24);
+    let lats = find(&buffer, "Lats", 4).expect("Home lists Lats");
+    app.hover(hits.at(lats));
+    assert_eq!(app.hovered, Some(MouseTarget::Muscle(Muscle::Lats)));
+    let (buffer, hits) = frame(&mut app, 80, 24);
+    assert!(underlined(&buffer, lats));
+
+    let help = find(&buffer, "help", 23).expect("the footer offers help");
+    app.hover(hits.at(help));
+    let (buffer, _) = frame(&mut app, 80, 24);
+    assert!(underlined(&buffer, help), "footer hints light up too");
+    assert!(!underlined(&buffer, lats), "the old row is plain again");
+}
+
+#[test]
+fn hover_ignores_things_that_do_nothing() {
+    let mut app = onboarded();
+    let (_, hits) = frame(&mut app, 80, 24);
+    // The blank line under the week bar is part of the body, not a target.
+    assert_eq!(hits.at(Position::new(40, 3)), Some(MouseTarget::Body));
+    assert!(!app.hover(hits.at(Position::new(40, 3))));
+    assert_eq!(app.hovered, None);
+
+    app.handle_key(KeyEvent::from(KeyCode::Char('?')));
+    let (_, hits) = frame(&mut app, 80, 24);
+    assert!(
+        !app.hover(hits.at(Position::new(0, 1))),
+        "the backdrop is not a target"
+    );
 }
