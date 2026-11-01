@@ -123,6 +123,8 @@ Snapshot tests (`src/ui/snapshot_tests.rs`) render every tab and every log-sheet
 cargo insta test --review
 ```
 
+CI (`.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` on every push to `main` and every pull request. On CI, a snapshot that does not match fails the build.
+
 ### Notes on the shared data
 
 `exercises.json` comes from the iOS app, with its duplicate "Chest Dips" entry removed. A few entries name muscles the app does not track. The catalog maps them to a tracked muscle (`MUSCLE_ALIASES` in `src/domain/catalog.rs`):
