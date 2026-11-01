@@ -529,7 +529,7 @@ mod tests {
         };
         assert_eq!(names("BENCH inc", None), ["Incline Bench Press".to_owned()]);
         assert!(names("curl", Some(Muscle::Biceps)).len() >= 4);
-        assert!(names("curl", Some(Muscle::Quads)).is_empty());
+        assert_eq!(names("curl", Some(Muscle::Quads)), Vec::<String>::new());
         assert_eq!(names("", None).len(), catalog.len());
     }
 
