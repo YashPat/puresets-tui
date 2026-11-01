@@ -90,7 +90,9 @@ fn render(app: &mut App, width: u16, height: u16) -> String {
     let mut terminal =
         Terminal::new(TestBackend::new(width, height)).expect("test backend never fails");
     terminal
-        .draw(|frame| draw(frame, app, Theme::COLOR))
+        .draw(|frame| {
+            draw(frame, app, Theme::COLOR);
+        })
         .expect("drawing to a test backend never fails");
     let buffer = terminal.backend().buffer();
     let mut screen = String::new();

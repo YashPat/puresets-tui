@@ -8,11 +8,12 @@ use ratatui::{
 };
 
 use super::{
+    HitMap,
     theme::Theme,
     widgets::{Row, fit, set_bar, set_bar_width, status_text},
 };
 use crate::{
-    app::App,
+    app::{App, MouseTarget},
     domain::{Category, Muscle, Sets, Target},
 };
 
@@ -25,7 +26,7 @@ const MARKER_WIDTH: u16 = 2;
 const COUNT_WIDTH: u16 = 12;
 const STATUS_WIDTH: u16 = 12;
 
-pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &mut App, theme: Theme) {
+pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &mut App, hits: &mut HitMap, theme: Theme) {
     let [week_bar, _, content] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -50,13 +51,35 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &mut App, theme: Theme) {
             .unwrap_or(0);
         let height = left_lines.lines.len().max(right_lines.lines.len());
         let scroll = scroll_to(app, selected_line, height, content.height);
+        add_muscle_hits(hits, left, &left_lines.muscles, scroll);
+        add_muscle_hits(hits, right, &right_lines.muscles, scroll);
         frame.render_widget(Paragraph::new(left_lines.lines).scroll((scroll, 0)), left);
         frame.render_widget(Paragraph::new(right_lines.lines).scroll((scroll, 0)), right);
     } else {
         let lines = category_lines(app, &Category::ALL, content.width, theme);
         let height = lines.lines.len();
         let scroll = scroll_to(app, lines.selected.unwrap_or(0), height, content.height);
+        add_muscle_hits(hits, content, &lines.muscles, scroll);
         frame.render_widget(Paragraph::new(lines.lines).scroll((scroll, 0)), content);
+    }
+}
+
+/// Makes each visible muscle row clickable across the column's width.
+fn add_muscle_hits(hits: &mut HitMap, area: Rect, muscles: &[(usize, Muscle)], scroll: u16) {
+    for &(line, muscle) in muscles {
+        let Some(row) = line
+            .checked_sub(usize::from(scroll))
+            .and_then(|row| u16::try_from(row).ok())
+            .filter(|&row| row < area.height)
+        else {
+            continue;
+        };
+        let row_area = Rect {
+            y: area.y + row,
+            height: 1,
+            ..area
+        };
+        hits.add(row_area, MouseTarget::Muscle(muscle));
     }
 }
 
@@ -127,12 +150,15 @@ struct CategoryLines {
     lines: Vec<Line<'static>>,
     /// Index of the selected muscle's line, if it is in these categories.
     selected: Option<usize>,
+    /// The line each muscle sits on.
+    muscles: Vec<(usize, Muscle)>,
 }
 
 fn category_lines(app: &App, categories: &[Category], width: u16, theme: Theme) -> CategoryLines {
     let target = app.target();
     let mut lines = Vec::new();
     let mut selected = None;
+    let mut rows = Vec::new();
     for (index, &category) in categories.iter().enumerate() {
         if index > 0 {
             lines.push(Line::raw(""));
@@ -143,6 +169,7 @@ fn category_lines(app: &App, categories: &[Category], width: u16, theme: Theme) 
             .collect();
         lines.push(category_header(category, &muscles, target, theme));
         for (muscle, sets) in muscles {
+            rows.push((lines.len(), muscle));
             let row = if muscle == app.selected {
                 selected = Some(lines.len());
                 Row::Selected
@@ -152,7 +179,11 @@ fn category_lines(app: &App, categories: &[Category], width: u16, theme: Theme) 
             lines.push(muscle_row(muscle, sets, target, row, width, theme));
         }
     }
-    CategoryLines { lines, selected }
+    CategoryLines {
+        lines,
+        selected,
+        muscles: rows,
+    }
 }
 
 fn category_header(

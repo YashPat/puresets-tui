@@ -20,6 +20,8 @@ use log_sheet::SheetEvent;
 
 const TOAST_DURATION: Duration = Duration::from_secs(4);
 const UNDO_LIMIT: usize = 20;
+/// Lines the Why text moves per scroll-wheel step.
+const WHEEL_LINES: u16 = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Tab {
@@ -49,6 +51,23 @@ impl Tab {
     fn offset(self, step: usize) -> Self {
         Self::ALL[(self.index() + step) % Self::ALL.len()]
     }
+}
+
+/// What a mouse event landed on, as the last frame laid it out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MouseTarget {
+    Tab(Tab),
+    Muscle(Muscle),
+    WhyText,
+    /// The exercise list in the log sheet's pick step.
+    LogList,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MouseAction {
+    Click,
+    ScrollUp,
+    ScrollDown,
 }
 
 /// A modal layer drawn over the current tab; it receives all keys.
@@ -215,6 +234,35 @@ impl App {
                 Tab::Why => self.why_key(key),
                 Tab::Settings => self.settings_key(key),
             },
+        }
+    }
+
+    /// The mouse is an extra: every action here has a key that does the same.
+    pub fn handle_mouse(&mut self, target: MouseTarget, action: MouseAction) {
+        if self.overlay.is_some() {
+            let in_pick =
+                matches!(&self.overlay, Some(Overlay::Log(sheet)) if sheet.step == Step::Pick);
+            if target == MouseTarget::LogList && in_pick {
+                match action {
+                    MouseAction::ScrollUp => self.handle_key(KeyEvent::from(KeyCode::Up)),
+                    MouseAction::ScrollDown => self.handle_key(KeyEvent::from(KeyCode::Down)),
+                    MouseAction::Click => {}
+                }
+            }
+            return;
+        }
+        match (target, action) {
+            (MouseTarget::Tab(tab), MouseAction::Click) => self.tab = tab,
+            (MouseTarget::Muscle(muscle), MouseAction::Click) if self.tab == Tab::Home => {
+                self.selected = muscle;
+            }
+            (MouseTarget::WhyText, MouseAction::ScrollUp) if self.tab == Tab::Why => {
+                self.why_scroll = self.why_scroll.saturating_sub(WHEEL_LINES);
+            }
+            (MouseTarget::WhyText, MouseAction::ScrollDown) if self.tab == Tab::Why => {
+                self.why_scroll = self.why_scroll.saturating_add(WHEEL_LINES);
+            }
+            _ => {}
         }
     }
 

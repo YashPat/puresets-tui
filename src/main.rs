@@ -7,6 +7,7 @@ mod ui;
 
 use std::{
     io::{self, IsTerminal},
+    panic,
     path::{Path, PathBuf},
     process::ExitCode,
     time::{Duration, Instant},
@@ -19,15 +20,19 @@ use color_eyre::{
 use ratatui::{
     DefaultTerminal,
     crossterm::{
-        event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyEventKind},
+        event::{
+            self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
+            EnableMouseCapture, Event, KeyEventKind, MouseButton, MouseEvent, MouseEventKind,
+        },
         execute,
     },
+    layout::Position,
 };
 
-use app::{App, ToastKind};
+use app::{App, MouseAction, ToastKind};
 use domain::{Catalog, Muscle, Week};
 use storage::{DATA_ENV, Loaded, SaveError, Storage, Unparseable};
-use ui::Theme;
+use ui::{HitMap, Theme};
 
 /// How long to wait for input before refreshing the clock and toasts.
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -170,23 +175,35 @@ fn run_interactive(storage: &mut Storage, loaded: Loaded) -> Result<()> {
 
     // `init` also installs a panic hook that restores the terminal.
     let mut terminal = ratatui::init();
-    // Bracketed paste is an enhancement: without it, pasted text arrives as keys.
-    let _ = execute!(io::stdout(), EnableBracketedPaste);
+    // Paste and mouse are enhancements: without them, pasted text arrives as
+    // keys and the mouse does nothing.
+    let _ = execute!(io::stdout(), EnableBracketedPaste, EnableMouseCapture);
+    let restore_hook = panic::take_hook();
+    panic::set_hook(Box::new(move |info| {
+        disable_enhancements();
+        restore_hook(info);
+    }));
     let result = event_loop(&mut terminal, &mut app, storage);
-    let _ = execute!(io::stdout(), DisableBracketedPaste);
+    disable_enhancements();
     ratatui::restore();
     result
+}
+
+fn disable_enhancements() {
+    let _ = execute!(io::stdout(), DisableMouseCapture, DisableBracketedPaste);
 }
 
 fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &mut Storage) -> Result<()> {
     let theme = Theme::from_env();
     let mut unsaved = false;
+    let mut hits = HitMap::default();
     while !app.should_quit() {
-        terminal.draw(|frame| ui::draw(frame, app, theme))?;
+        terminal.draw(|frame| hits = ui::draw(frame, app, theme))?;
         if event::poll(POLL_INTERVAL)? {
             match event::read()? {
                 Event::Key(key) if key.kind == KeyEventKind::Press => app.handle_key(key),
                 Event::Paste(text) => app.paste(&text),
+                Event::Mouse(mouse) => handle_mouse(app, &hits, mouse),
                 _ => {}
             }
         }
@@ -212,6 +229,19 @@ fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &mut Stora
             .wrap_err("your last changes could not be saved")?;
     }
     Ok(())
+}
+
+/// Hit-tests against the frame just drawn, which is what the user clicked on.
+fn handle_mouse(app: &mut App, hits: &HitMap, mouse: MouseEvent) {
+    let action = match mouse.kind {
+        MouseEventKind::Down(MouseButton::Left) => MouseAction::Click,
+        MouseEventKind::ScrollUp => MouseAction::ScrollUp,
+        MouseEventKind::ScrollDown => MouseAction::ScrollDown,
+        _ => return,
+    };
+    if let Some(target) = hits.at(Position::new(mouse.column, mouse.row)) {
+        app.handle_mouse(target, action);
+    }
 }
 
 fn save_error_message(err: &SaveError) -> String {

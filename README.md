@@ -72,14 +72,16 @@ Press `?` in the app for the full list.
 | Settings | `h`/`l` | Change the target by one set |
 | | `m` / `o` | Moderate / Optimal preset |
 
+The mouse is optional: click a tab to switch to it, click a muscle on Home to select it, and use the scroll wheel on Why or over the log sheet's exercise list. Everything it does has a key.
+
 ## Terminal Compatibility
 
 | | |
 |---|---|
 | **Required** | A TTY, UTF-8, at least 64×20 |
-| **Enhanced** | 16 colours or more; bracketed paste (pasting into search) |
-| **Fallback** | `NO_COLOR` / `TERM=dumb` use bold, dim and reverse instead of colour. Without bracketed paste, pasted text arrives as ordinary key presses. |
-| **Not used** | Mouse, truecolor, images |
+| **Enhanced** | 16 colours or more; bracketed paste (pasting into search); mouse clicks and scroll wheel |
+| **Fallback** | `NO_COLOR` / `TERM=dumb` use bold, dim and reverse instead of colour. Without bracketed paste, pasted text arrives as ordinary key presses. Without mouse reporting, use the keys. |
+| **Not used** | Truecolor, images |
 
 It is built on crossterm, so it should work in any terminal crossterm supports: macOS and Linux terminals, Windows Terminal, and tmux. So far it has only been exercised through headless render tests and a scripted pseudo-terminal on macOS.
 
@@ -90,6 +92,7 @@ It is built on crossterm, so it should work in any terminal crossterm supports: 
 - **"Not saved: data file changed outside PureSets"**: something else wrote the data file. Quit and reopen PureSets to load the file's version; changes made since the warning are lost.
 - **"Couldn't read data file; saved it as data.json.bak"**: the file was not valid JSON. Fix the backup by hand and rename it back to `data.json` while the app is closed.
 - **"Skipped part of the data file"**: an entry in the data file was not understood (for example an unknown muscle or a malformed week) and was skipped. The rest of the file loaded normally. Fix the entry by hand if you need it back.
+- **Can't select text with the mouse**: PureSets captures the mouse while it runs. Hold `shift` while dragging (`option` in macOS Terminal and iTerm2) to select text anyway.
 - **Garbled box drawing or bars**: the terminal or font is not UTF-8. Check `locale` and use a font with box-drawing characters.
 - **The terminal is left in a strange state after a crash**: run `reset`. The app restores the terminal on normal exit, on errors and on panics, so please report it if this happens.
 

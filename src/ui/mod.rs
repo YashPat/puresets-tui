@@ -12,25 +12,50 @@ mod widgets;
 
 use ratatui::{
     Frame,
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Layout, Position, Rect},
     text::{Line, Span},
     widgets::Paragraph,
 };
 
 pub use theme::Theme;
 
-use crate::app::{App, Field, Overlay, Step, Tab};
+use crate::app::{App, Field, MouseTarget, Overlay, Step, Tab};
 use widgets::key_hints;
 
 /// Below this size the layout cannot fit; a message asks for more room.
 pub const MIN_WIDTH: u16 = 64;
 pub const MIN_HEIGHT: u16 = 20;
 
-pub fn draw(frame: &mut Frame<'_>, app: &mut App, theme: Theme) {
+/// Where the last frame put the things a mouse can act on.
+#[derive(Debug, Default)]
+pub struct HitMap {
+    regions: Vec<(Rect, MouseTarget)>,
+}
+
+impl HitMap {
+    /// The target under `position`; later regions sit on top of earlier ones.
+    pub fn at(&self, position: Position) -> Option<MouseTarget> {
+        self.regions
+            .iter()
+            .rev()
+            .find(|(area, _)| area.contains(position))
+            .map(|&(_, target)| target)
+    }
+
+    fn add(&mut self, area: Rect, target: MouseTarget) {
+        if !area.is_empty() {
+            self.regions.push((area, target));
+        }
+    }
+}
+
+/// Draws one frame and returns where its clickable parts ended up.
+pub fn draw(frame: &mut Frame<'_>, app: &mut App, theme: Theme) -> HitMap {
+    let mut hits = HitMap::default();
     let area = frame.area();
     if area.width < MIN_WIDTH || area.height < MIN_HEIGHT {
         draw_too_small(frame, area, theme);
-        return;
+        return hits;
     }
 
     let [header, body, footer] = Layout::vertical([
@@ -41,14 +66,21 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App, theme: Theme) {
     .areas(area);
     let body = body.inner(ratatui::layout::Margin::new(2, 0));
 
-    draw_header(frame, header, app, theme);
+    draw_header(frame, header, app, &mut hits, theme);
     match app.tab {
-        Tab::Home => home::draw(frame, body, app, theme),
+        Tab::Home => home::draw(frame, body, app, &mut hits, theme),
         Tab::Insights => insights::draw(frame, body, app, theme),
-        Tab::Why => why::draw(frame, body, app, theme),
+        Tab::Why => {
+            why::draw(frame, body, app, theme);
+            hits.add(body, MouseTarget::WhyText);
+        }
         Tab::Settings => settings::draw(frame, body, app, theme),
     }
     draw_footer(frame, footer, app, theme);
+    // Overlays are modal: nothing underneath takes clicks.
+    if app.overlay.is_some() {
+        hits.regions.clear();
+    }
 
     let overlay_area = area.inner(ratatui::layout::Margin::new(1, 1));
     match &mut app.overlay {
@@ -57,10 +89,19 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut App, theme: Theme) {
             overlays::draw_onboarding(frame, overlay_area, *choice, theme);
         }
         Some(Overlay::Log(sheet)) => {
-            log_sheet::draw(frame, overlay_area, sheet, &app.tracker, app.week, theme);
+            log_sheet::draw(
+                frame,
+                overlay_area,
+                sheet,
+                &app.tracker,
+                app.week,
+                &mut hits,
+                theme,
+            );
         }
         None => {}
     }
+    hits
 }
 
 fn draw_too_small(frame: &mut Frame<'_>, area: Rect, theme: Theme) {
@@ -79,7 +120,7 @@ fn draw_too_small(frame: &mut Frame<'_>, area: Rect, theme: Theme) {
     frame.render_widget(Paragraph::new(lines).centered(), rect);
 }
 
-fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
+fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, theme: Theme) {
     let mut spans = vec![Span::styled(" PureSets ", theme.accent()), Span::raw("  ")];
     for (index, tab) in Tab::ALL.into_iter().enumerate() {
         let label = format!(" {} {} ", index + 1, tab.title());
@@ -88,7 +129,16 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
         } else {
             theme.dim()
         };
-        spans.push(Span::styled(label, style));
+        let label = Span::styled(label, style);
+        let x = spans.iter().map(Span::width).sum::<usize>();
+        let label_area = Rect {
+            x: area.x.saturating_add(u16::try_from(x).unwrap_or(u16::MAX)),
+            width: u16::try_from(label.width()).unwrap_or(u16::MAX),
+            height: 1,
+            ..area
+        };
+        hits.add(label_area.intersection(area), MouseTarget::Tab(tab));
+        spans.push(label);
         spans.push(Span::raw(" "));
     }
     let tabs = Line::from(spans);
@@ -209,6 +259,8 @@ fn footer_hints(app: &App) -> Vec<(&'static str, &'static str)> {
     }
 }
 
+#[cfg(test)]
+mod mouse_tests;
 #[cfg(test)]
 mod snapshot_tests;
 #[cfg(test)]

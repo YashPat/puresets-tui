@@ -52,7 +52,9 @@ fn type_text(app: &mut App, text: &str) {
 fn render(app: &mut App, width: u16, height: u16) -> String {
     let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
     terminal
-        .draw(|frame| draw(frame, app, Theme::COLOR))
+        .draw(|frame| {
+            draw(frame, app, Theme::COLOR);
+        })
         .unwrap();
     let buffer = terminal.backend().buffer();
     let mut screen = String::new();
@@ -169,7 +171,9 @@ fn mono_theme_renders_without_colour() {
     let mut app = onboarded();
     let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
     terminal
-        .draw(|frame| draw(frame, &mut app, Theme::MONO))
+        .draw(|frame| {
+            draw(frame, &mut app, Theme::MONO);
+        })
         .unwrap();
     let buffer = terminal.backend().buffer();
     assert!(

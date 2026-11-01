@@ -8,11 +8,15 @@ use ratatui::{
 };
 
 use super::{
+    HitMap,
     theme::Theme,
     widgets::{Row, centered, fit, status_text},
 };
 use crate::{
-    app::{CreateForm, Field, LogSheet, MAX_SETS, NoteEditor, PickRow, SetCount, Step, TextInput},
+    app::{
+        CreateForm, Field, LogSheet, MAX_SETS, MouseTarget, NoteEditor, PickRow, SetCount, Step,
+        TextInput,
+    },
     domain::{Category, Exercise, Muscle, Origin, Role, Tracker, Week},
 };
 
@@ -27,6 +31,7 @@ pub fn draw(
     sheet: &mut LogSheet,
     tracker: &Tracker,
     week: Week,
+    hits: &mut HitMap,
     theme: Theme,
 ) {
     let rect = centered(area, SHEET_WIDTH, SHEET_HEIGHT);
@@ -55,7 +60,10 @@ pub fn draw(
     frame.render_widget(block, rect);
 
     match &sheet.step {
-        Step::Pick => draw_pick(frame, inner, sheet, tracker, theme),
+        Step::Pick => {
+            let list = draw_pick(frame, inner, sheet, tracker, theme);
+            hits.add(list, MouseTarget::LogList);
+        }
         Step::Sets(sets) => draw_sets(frame, inner, sets, tracker, week, theme),
         Step::Note(editor) => draw_note(frame, inner, editor, theme),
         Step::Create(form) => draw_create(frame, inner, form, theme),
@@ -110,7 +118,7 @@ fn draw_pick(
     sheet: &mut LogSheet,
     tracker: &Tracker,
     theme: Theme,
-) {
+) -> Rect {
     let [search, filter, _, list] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -190,21 +198,12 @@ fn draw_pick(
                 if is_selected {
                     selected_item = items.len();
                 }
-                let label = if sheet.query.is_empty() {
-                    "+ Create a custom exercise".to_owned()
+                let row = if is_selected {
+                    Row::Selected
                 } else {
-                    format!("+ Create “{}”", sheet.query.value().trim())
+                    Row::Plain
                 };
-                let style = if is_selected {
-                    theme.selected()
-                } else {
-                    theme.accent()
-                };
-                let marker = if is_selected { "▸ " } else { "  " };
-                items.push(ListItem::new(Line::from(vec![
-                    Span::styled(marker, theme.selected()),
-                    Span::styled(label, style),
-                ])));
+                items.push(ListItem::new(new_custom_line(&sheet.query, row, theme)));
             }
         }
     }
@@ -214,6 +213,24 @@ fn draw_pick(
     }
     sheet.list.select(Some(selected_item));
     frame.render_stateful_widget(List::new(items), list, &mut sheet.list);
+    list
+}
+
+/// The "+ Create" row at the end of the list.
+fn new_custom_line(query: &TextInput, row: Row, theme: Theme) -> Line<'static> {
+    let label = if query.is_empty() {
+        "+ Create a custom exercise".to_owned()
+    } else {
+        format!("+ Create “{}”", query.value().trim())
+    };
+    let style = match row {
+        Row::Selected => theme.selected(),
+        Row::Plain => theme.accent(),
+    };
+    Line::from(vec![
+        Span::styled(row.marker(), theme.selected()),
+        Span::styled(label, style),
+    ])
 }
 
 fn exercise_line(exercise: &Exercise, row: Row, theme: Theme) -> Line<'static> {
