@@ -22,6 +22,10 @@ use log_sheet::SheetEvent;
 use motion::{BarMove, Tween};
 
 const TOAST_DURATION: Duration = Duration::from_secs(4);
+/// How long a new toast takes to slide in.
+const TOAST_REVEAL: Duration = Duration::from_millis(150);
+/// A toast dims for this long before it goes.
+const TOAST_FADE: Duration = Duration::from_millis(600);
 const UNDO_LIMIT: usize = 20;
 /// How long a Home bar takes to reach a new set count.
 const BAR_DURATION: Duration = Duration::from_millis(220);
@@ -119,6 +123,18 @@ pub struct Toast {
     pub message: String,
     pub kind: ToastKind,
     expires: Instant,
+    /// The slide-in, unless motion is off.
+    reveal: Option<Tween>,
+}
+
+/// How a toast is drawn at one instant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ToastFrame<'toast> {
+    /// The part of the message shown so far, from its start.
+    pub text: &'toast str,
+    pub kind: ToastKind,
+    /// Whether the toast is about to go and should be drawn dim.
+    pub fading: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -220,6 +236,11 @@ impl App {
         let now = self.now;
         self.bars.iter().any(|(.., bar)| bar.tween.is_running(now))
             || self.pulses.iter().any(|(.., pulse)| pulse.is_running(now))
+            || self
+                .toast
+                .as_ref()
+                .and_then(|toast| toast.reveal)
+                .is_some_and(|reveal| reveal.is_running(now))
     }
 
     /// Whether a muscle's row on Home is flashing for reaching the target.
@@ -261,11 +282,33 @@ impl App {
     }
 
     pub fn notify(&mut self, kind: ToastKind, message: impl Into<String>) {
+        let reveal = (self.motion == Motion::On).then(|| Tween::new(self.now, TOAST_REVEAL));
         self.toast = Some(Toast {
             message: message.into(),
             kind,
             expires: self.now + TOAST_DURATION,
+            reveal,
         });
+    }
+
+    /// The toast as it should look now: partly slid in, or dimmed near its end.
+    pub fn toast_frame(&self) -> Option<ToastFrame<'_>> {
+        let toast = self.toast.as_ref()?;
+        let chars = toast.message.chars().count();
+        let shown = toast.reveal.map_or(chars, |reveal| {
+            let progress = usize::try_from(reveal.eased(self.now)).unwrap_or(1000);
+            (chars * progress).div_ceil(1000)
+        });
+        let end = toast
+            .message
+            .char_indices()
+            .nth(shown)
+            .map_or(toast.message.len(), |(index, _)| index);
+        Some(ToastFrame {
+            text: &toast.message[..end],
+            kind: toast.kind,
+            fading: self.now + TOAST_FADE >= toast.expires,
+        })
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) {
@@ -948,6 +991,7 @@ mod tests {
 
         let mut still = onboarded();
         still.motion = Motion::Off;
+        still.toast = None;
         press(&mut still, &[KeyCode::Char('+')]);
         assert!(!still.is_animating());
         assert_eq!(still.bar_fill(Muscle::Chest), Fill::from(Sets::ONE));
@@ -975,12 +1019,58 @@ mod tests {
     }
 
     #[test]
+    fn toasts_slide_in_then_dim_before_they_go() {
+        let mut app = onboarded();
+        let start = app.now;
+        let today = date(2026, 11, 1);
+        press(&mut app, &[KeyCode::Char('u')]);
+        let message = app.toast.as_ref().map(|t| t.message.clone()).unwrap();
+        let frame = app.toast_frame().unwrap();
+        assert_eq!(frame.text, "", "nothing shows before the slide starts");
+        assert!(app.is_animating());
+
+        app.tick(start + TOAST_REVEAL / 3, today);
+        let frame = app.toast_frame().unwrap();
+        assert!(
+            !frame.text.is_empty() && frame.text.len() < message.len(),
+            "part way in: {:?}",
+            frame.text
+        );
+        assert!(message.starts_with(frame.text));
+
+        app.tick(start + TOAST_REVEAL, today);
+        assert!(!app.is_animating());
+        let frame = app.toast_frame().unwrap();
+        assert_eq!(frame.text, message);
+        assert!(!frame.fading);
+
+        let fade_start = (start + TOAST_DURATION)
+            .checked_sub(TOAST_FADE)
+            .expect("the clock is past the fade length");
+        app.tick(fade_start, today);
+        assert!(app.toast_frame().unwrap().fading);
+    }
+
+    #[test]
+    fn toasts_show_whole_with_motion_off() {
+        let mut app = onboarded();
+        app.motion = Motion::Off;
+        press(&mut app, &[KeyCode::Char('u')]);
+        assert_eq!(
+            app.toast_frame().map(|frame| frame.text),
+            Some("Nothing to undo.")
+        );
+        assert!(!app.is_animating());
+    }
+
+    #[test]
     fn toasts_expire_and_the_week_rolls_over() {
         let mut app = onboarded();
         let start = app.now;
         assert!(app.toast.is_some());
         app.tick(start + TOAST_DURATION, date(2026, 11, 2));
         assert!(app.toast.is_none());
+        assert!(app.toast_frame().is_none());
         assert_eq!(app.week.to_string(), "2026-W45");
     }
 }

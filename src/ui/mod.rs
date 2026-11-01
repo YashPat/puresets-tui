@@ -177,8 +177,13 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, 
 }
 
 fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, theme: Theme) {
-    if let Some(toast) = &app.toast {
-        let line = Line::styled(format!(" {}", toast.message), theme.toast(toast.kind));
+    if let Some(toast) = app.toast_frame() {
+        let style = if toast.fading {
+            theme.dim()
+        } else {
+            theme.toast(toast.kind)
+        };
+        let line = Line::styled(format!(" {}", toast.text), style);
         frame.render_widget(line, area);
         return;
     }

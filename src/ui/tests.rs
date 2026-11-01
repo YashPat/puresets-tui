@@ -14,20 +14,23 @@ use ratatui::{
 
 use super::{MIN_HEIGHT, MIN_WIDTH, Theme, draw};
 use crate::{
-    app::{App, Tab},
+    app::{App, Motion, Tab},
     domain::{Catalog, Tracker},
 };
 
 const SIZES: [(u16, u16); 3] = [(MIN_WIDTH, MIN_HEIGHT), (80, 24), (140, 45)];
 
+/// The clock never moves here, so motion is off and frames show end states.
 fn app() -> App {
     let tracker = Tracker::new(Catalog::built_in().unwrap());
-    App::new(
+    let mut app = App::new(
         tracker,
         date(2026, 11, 1),
         Instant::now(),
         "~/data.json".into(),
-    )
+    );
+    app.motion = Motion::Off;
+    app
 }
 
 fn onboarded() -> App {
@@ -217,6 +220,7 @@ fn reversed_at(buffer: &Buffer, text: &str) -> bool {
 #[test]
 fn reaching_the_target_flashes_without_colour_too() {
     let mut app = onboarded();
+    app.motion = Motion::On;
     let halves = app.target().sets().halves();
     for _ in 0..halves / 2 {
         press(&mut app, &[KeyCode::Char('+')]);
@@ -224,7 +228,6 @@ fn reaching_the_target_flashes_without_colour_too() {
     assert!(reversed_at(&cells(&mut app, Theme::MONO), "✓ on target"));
 
     let mut still = onboarded();
-    still.motion = crate::app::Motion::Off;
     for _ in 0..halves / 2 {
         press(&mut still, &[KeyCode::Char('+')]);
     }
