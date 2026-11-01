@@ -1,0 +1,203 @@
+[
+  {
+    "name": "Bench Press",
+    "primaryMuscles": ["Chest", "Front Delts"],
+    "secondaryMuscles": ["Triceps"]
+  },
+  {
+    "name": "Decline Bench Press",
+    "primaryMuscles": ["Chest"],
+    "secondaryMuscles": ["Triceps", "Front Delts"]
+  },
+  {
+    "name": "Incline Bench Press",
+    "primaryMuscles": ["Chest", "Front Delts"],
+    "secondaryMuscles": ["Triceps"]
+  },
+  {
+    "name": "Chest Press",
+    "primaryMuscles": ["Chest", "Front Delts"],
+    "secondaryMuscles": ["Triceps"]
+  },
+  {
+    "name": "Chest Fly",
+    "primaryMuscles": ["Chest"],
+    "secondaryMuscles": ["Front Delts"]
+  },
+  {
+    "name": "Push-Up",
+    "primaryMuscles": ["Chest", "Front Delts"],
+    "secondaryMuscles": ["Triceps", "Abs"]
+  },
+  {
+    "name": "Arnold Press",
+    "primaryMuscles": ["Front Delts"],
+    "secondaryMuscles": ["Lateral Delts"]
+  },
+  {
+    "name": "Face Pull",
+    "primaryMuscles": ["Rear Delts"],
+    "secondaryMuscles": ["Upper Back", "Lateral Delts"]
+  },
+  {
+    "name": "Lateral Raise",
+    "primaryMuscles": ["Lateral Delts"],
+    "secondaryMuscles": ["Front Delts"]
+  },
+  {
+    "name": "Bent-Over Row",
+    "primaryMuscles": ["Lats", "Upper Back", "Rear Delts"],
+    "secondaryMuscles": ["Biceps", "Forearms", "Lower Back"]
+  },
+  {
+    "name": "Row",
+    "primaryMuscles": ["Lats", "Upper Back", "Rear Delts"],
+    "secondaryMuscles": ["Biceps", "Forearms", "Lower Back"]
+  },
+  {
+    "name": "Front Raise",
+    "primaryMuscles": ["Front Delts"],
+    "secondaryMuscles": ["Lateral Delts"]
+  },
+  {
+    "name": "Shrug",
+    "primaryMuscles": ["Upper Back"],
+    "secondaryMuscles": ["Forearms"]
+  },
+  {
+    "name": "Shoulder Press",
+    "primaryMuscles": ["Front Delts"],
+    "secondaryMuscles": ["Triceps","Lateral Delts"]
+  },
+  {
+    "name": "Squat",
+    "primaryMuscles": ["Quads", "Glutes", "Lower Back"],
+    "secondaryMuscles": ["Calves"]
+  },
+  {
+    "name": "Pistol Squat",
+    "primaryMuscles": ["Quads", "Glutes"],
+    "secondaryMuscles": ["Hamstrings"]
+  },
+  {
+    "name": "Pull-up",
+    "primaryMuscles": ["Lats", "Biceps"],
+    "secondaryMuscles": ["Shoulders", "Core"]
+  },
+  {
+    "name": "Deadlift",
+    "primaryMuscles": ["Hamstrings", "Glutes", "Lower Back"],
+    "secondaryMuscles": ["Quads", "Core", "Upper Back"]
+  },
+  {
+    "name": "Romanian Deadlift",
+    "primaryMuscles": ["Hamstrings", "Glutes", "Lower Back"],
+    "secondaryMuscles": ["Upper Back", "Forearms"]
+  },
+  {
+    "name": "Overhead Press",
+    "primaryMuscles": ["Shoulders", "Triceps"],
+    "secondaryMuscles": ["Core", "Chest"]
+  },
+  {
+    "name": "Reverse Fly",
+    "primaryMuscles": ["Rear Delts"],
+    "secondaryMuscles": ["Upper Back"]
+  },
+  {
+    "name": "Bicep Curl",
+    "primaryMuscles": ["Biceps"],
+    "secondaryMuscles": ["Forearms"]
+  },
+  {
+    "name": "Drag Curl",
+    "primaryMuscles": ["Biceps"],
+    "secondaryMuscles": ["Forearms"]
+  },
+  {
+    "name": "Zottman Curl",
+    "primaryMuscles": ["Biceps"],
+    "secondaryMuscles": ["Forearms"]
+  },
+  {
+    "name": "Hammer Curl",
+    "primaryMuscles": ["Biceps"],
+    "secondaryMuscles": ["Forearms"]
+  },
+  {
+    "name": "Triceps Extension",
+    "primaryMuscles": ["Triceps"],
+  },
+  {
+    "name": "Skull Crushers",
+    "primaryMuscles": ["Triceps"],
+  },
+  {
+    "name": "Triceps Pushdown",
+    "primaryMuscles": ["Triceps"],
+  },
+  {
+    "name": "Hip Thrust",
+    "primaryMuscles": ["Glutes"],
+    "secondaryMuscles": ["Quads"]
+  },
+  {
+    "name": "Hack Squat Machine",
+    "primaryMuscles": ["Quads", "Glutes"],
+  },
+  {
+    "name": "Lunge",
+    "primaryMuscles": ["Quads", "Glutes"],
+  },
+  {
+    "name": "Bulgarian Split Squat",
+    "primaryMuscles": ["Quads", "Glutes"],
+  },
+  {
+    "name": "Leg Curl",
+    "primaryMuscles": ["Hamstrings"],
+  },
+  {
+    "name": "Leg Extension",
+    "primaryMuscles": ["Quads"],
+  },
+  {
+    "name": "Leg Press",
+    "primaryMuscles": ["Quads", "Glutes"],
+    "secondaryMuscles": ["Hamstrings"],
+  },
+  {
+    "name": "Reverse Nordic",
+    "primaryMuscles": ["Quads"],
+  },
+  {
+    "name": "Chest Dips",
+    "primaryMuscles": ["Triceps"],
+    "secondaryMuscles": ["Chest","Front Delts"]
+  },
+  {
+    "name": "Chest Dips",
+    "primaryMuscles": ["Triceps"],
+    "secondaryMuscles": ["Chest","Front Delts"]
+  },
+  {
+    "name": "Crunches",
+    "primaryMuscles": ["Abs"],
+  },
+  {
+    "name": "Planks",
+    "primaryMuscles": ["Abs"],
+  }, 
+  {
+    "name": "Hanging Leg Raises",
+    "primaryMuscles": ["Abs"],
+  }, 
+  {
+    "name": "Calf Raises",
+    "primaryMuscles": ["Calves"],
+  }, 
+  {
+    "name": "Wrist Curls",
+    "primaryMuscles": ["Forearms"],
+  }, 
+]
