@@ -26,7 +26,7 @@ use ratatui::{
 
 use app::{App, ToastKind};
 use domain::{Catalog, Muscle, Week};
-use storage::{DATA_ENV, Loaded, Storage};
+use storage::{DATA_ENV, Loaded, SaveError, Storage, Unparseable};
 use ui::Theme;
 
 /// How long to wait for input before refreshing the clock and toasts.
@@ -101,8 +101,8 @@ fn run() -> Result<()> {
         Mode::Help => print_out(USAGE),
         Mode::Version => print_out(&format!("puresets-tui {}", env!("CARGO_PKG_VERSION"))),
         Mode::Summary => {
-            let storage = storage_for(args.data)?;
-            let loaded = storage.load(Catalog::built_in()?)?;
+            let mut storage = storage_for(args.data)?;
+            let loaded = storage.load(Catalog::built_in()?, Unparseable::Fail)?;
             print_out(&summary(
                 &loaded,
                 Week::containing(jiff::Zoned::now().date()),
@@ -114,10 +114,10 @@ fn run() -> Result<()> {
                     "PureSets needs an interactive terminal. Use --summary for plain-text output."
                 );
             }
-            let storage = storage_for(args.data)?;
+            let mut storage = storage_for(args.data)?;
             // Load before entering fullscreen so errors print normally.
-            let loaded = storage.load(Catalog::built_in()?)?;
-            run_interactive(&storage, loaded)?;
+            let loaded = storage.load(Catalog::built_in()?, Unparseable::BackUp)?;
+            run_interactive(&mut storage, loaded)?;
         }
     }
     Ok(())
@@ -144,11 +144,24 @@ fn storage_for(data: Option<PathBuf>) -> Result<Storage> {
     }
 }
 
-fn run_interactive(storage: &Storage, loaded: Loaded) -> Result<()> {
-    let Loaded { tracker, warnings } = loaded;
+fn run_interactive(storage: &mut Storage, loaded: Loaded) -> Result<()> {
+    let Loaded {
+        tracker,
+        warnings,
+        backup,
+    } = loaded;
     let today = jiff::Zoned::now().date();
     let mut app = App::new(tracker, today, Instant::now(), display_path(storage.path()));
-    if !warnings.is_empty() {
+    if let Some(backup) = backup {
+        let name = backup.file_name().unwrap_or(backup.as_os_str());
+        app.notify(
+            ToastKind::Error,
+            format!(
+                "Couldn't read data file; saved it as {} and started fresh.",
+                name.display()
+            ),
+        );
+    } else if !warnings.is_empty() {
         app.notify(
             ToastKind::Error,
             format!("Skipped part of the data file: {}", warnings.join("; ")),
@@ -165,7 +178,7 @@ fn run_interactive(storage: &Storage, loaded: Loaded) -> Result<()> {
     result
 }
 
-fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &Storage) -> Result<()> {
+fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &mut Storage) -> Result<()> {
     let theme = Theme::from_env();
     let mut unsaved = false;
     while !app.should_quit() {
@@ -179,13 +192,14 @@ fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &Storage) 
         }
         app.tick(Instant::now(), jiff::Zoned::now().date());
 
-        // A failed save is retried on every pass until it works.
+        // A failed save is retried on every pass until it works. If the file
+        // changed on disk, that lasts until it is put back as it was.
         if app.take_dirty() || unsaved {
             match storage.save(&app.tracker) {
                 Ok(()) => unsaved = false,
                 Err(err) => {
                     if !unsaved {
-                        app.notify(ToastKind::Error, format!("Could not save: {err:#}"));
+                        app.notify(ToastKind::Error, save_error_message(&err));
                     }
                     unsaved = true;
                 }
@@ -198,6 +212,15 @@ fn event_loop(terminal: &mut DefaultTerminal, app: &mut App, storage: &Storage) 
             .wrap_err("your last changes could not be saved")?;
     }
     Ok(())
+}
+
+fn save_error_message(err: &SaveError) -> String {
+    match err {
+        SaveError::ChangedOnDisk(_) => {
+            "Not saved: data file changed outside PureSets. Changes kept here.".to_owned()
+        }
+        SaveError::Io(err) => format!("Could not save: {err:#}"),
+    }
 }
 
 /// The data path for display, with the home directory shortened to `~`.
@@ -271,6 +294,7 @@ mod tests {
         let loaded = Loaded {
             tracker,
             warnings: Vec::new(),
+            backup: None,
         };
         let text = summary(&loaded, week);
         assert!(

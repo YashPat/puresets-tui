@@ -42,6 +42,8 @@ puresets-tui --summary
 
 Changes save automatically. The data file is plain JSON, written atomically, so you can back it up, sync it, or edit it while the app is closed. Custom exercises and notes are stored in it too.
 
+If the data file changes on disk while the app is open (another copy of PureSets, a sync tool, or a hand edit), PureSets stops saving rather than overwrite it, and says so. Your changes stay on screen but are not written; quitting reports that they were not saved. If the data file is not valid JSON, PureSets renames it to `data.json.bak` (or `data.json.bak.2`, and so on) and starts fresh. `--summary` never renames it; it reports the error instead.
+
 ## Keyboard Shortcuts
 
 Press `?` in the app for the full list.
@@ -85,6 +87,8 @@ It is built on crossterm, so it should work in any terminal crossterm supports: 
 
 - **"PureSets needs a bigger window"**: enlarge the window to at least 64×20.
 - **"PureSets needs an interactive terminal"**: stdout is not a TTY (a pipe or CI). Use `--summary` instead.
+- **"Not saved: data file changed outside PureSets"**: something else wrote the data file. Quit and reopen PureSets to load the file's version; changes made since the warning are lost.
+- **"Couldn't read data file; saved it as data.json.bak"**: the file was not valid JSON. Fix the backup by hand and rename it back to `data.json` while the app is closed.
 - **"Skipped part of the data file"**: an entry in the data file was not understood (for example an unknown muscle or a malformed week) and was skipped. The rest of the file loaded normally. Fix the entry by hand if you need it back.
 - **Garbled box drawing or bars**: the terminal or font is not UTF-8. Check `locale` and use a font with box-drawing characters.
 - **The terminal is left in a strange state after a crash**: run `reset`. The app restores the terminal on normal exit, on errors and on panics, so please report it if this happens.
