@@ -371,14 +371,20 @@ mod neglected_tests {
 
     #[test]
     fn empty_log_flags_nothing() {
-        assert!(neglected_muscles(&TrainingLog::new(), week(44), target()).is_empty());
+        assert_eq!(
+            neglected_muscles(&TrainingLog::new(), week(44), target()),
+            Vec::<NeglectedMuscle>::new()
+        );
     }
 
     #[test]
     fn new_user_is_not_flagged() {
         let mut log = TrainingLog::new();
         add(&mut log, week(44), Muscle::Chest, 8);
-        assert!(neglected_muscles(&log, week(44), target()).is_empty());
+        assert_eq!(
+            neglected_muscles(&log, week(44), target()),
+            Vec::<NeglectedMuscle>::new()
+        );
     }
 
     #[test]
@@ -395,7 +401,10 @@ mod neglected_tests {
     fn two_weeks_is_not_flagged() {
         let mut log = TrainingLog::new();
         chest_weeks(&mut log, 43, 44, 8);
-        assert!(neglected_muscles(&log, week(44), target()).is_empty());
+        assert_eq!(
+            neglected_muscles(&log, week(44), target()),
+            Vec::<NeglectedMuscle>::new()
+        );
     }
 
     #[test]

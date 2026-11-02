@@ -1,0 +1,44 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings                                                 target 10 sets/wk
+
+   This week   4 weeks   52 weeks    Nov 2 – Nov 8  ·  137.5 sets logged
+
+  ╭ Push ────────────────────╮  ╭ Pull ───────────────────╮  ╭ Legs ────────────────────╮  ╭ Core ───────────────────╮
+  │ 11.5 avg/muscle  ·  47.5 │  │ 8 avg/muscle  ·  50 tot │  │ 7.5 avg/muscle  ·  30 to │  │ 10 avg/muscle  ·  10 to │
+  │ ████████████████████████ │  │ ███████████████████░░░░ │  │ ██████████████████░░░░░░ │  │ ███████████████████████ │
+  │ 100% of target           │  │ 83% of target           │  │ 75% of target            │  │ 100% of target          │
+  │ ✓ all on target          │  │ 1 muscle below target   │  │ 1 muscle below target    │  │ ✓ all on target         │
+  ╰──────────────────────────╯  ╰─────────────────────────╯  ╰──────────────────────────╯  ╰─────────────────────────╯
+
+  ▼ Rear Delts: under half target for 5 weeks                            SETS PER WEEK
+  ▼ Calves: under half target for 5 weeks
+                                                                                              ██ ██ ██ ██ ██
+  SETS THIS WEEK                                                                              ██ ██ ██ ██ ██
+                8 weeks                                                                       ██ ██ ██ ██ ██
+  Chest         ▁▁▁█████ ████████████████████│██████   13 ✓ +3                                ██ ██ ██ ██ ██
+  Front Delts   ▁▁▁█████ ████████████████████│██████   13 ✓ +3                                ██ ██ ██ ██ ██
+  Triceps       ▁▁▁█████ ████████████████████│███░░░ 11.5 ✓ +1.5         34 35 36 37 38 39 40 41 42 43 44 45
+  Lateral Delts ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    last 12 weeks, by week number
+  Forearms      ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target
+  Biceps        ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    MUSCLES BY WEEK
+  Lats          ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Chest          ··············◆◆◆◆◆◆◆◆◆◆
+  Upper Back    ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Triceps        ··············██████████
+  Lower Back    ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Front Delts    ··············◆◆◆◆◆◆◆◆◆◆
+  Quads         ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Lateral Delts  ··············▓▓▓▓▓▓▓▓▓▓
+  Glutes        ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Forearms       ··············▓▓▓▓▓▓▓▓▓▓
+  Hamstrings    ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Biceps         ··············▓▓▓▓▓▓▓▓▓▓
+  Abs           ▁▁▁█████ ████████████████████│░░░░░░   10 ✓ on target    Lats           ··············▓▓▓▓▓▓▓▓▓▓
+  Rear Delts    ▁▁▁▁▁▁▁▁ ░░░░░░░░░░░░░░░░░░░░│░░░░░░    0 10 to go       Upper Back     ··············▓▓▓▓▓▓▓▓▓▓
+  Calves        ▁▁▁▁▁▁▁▁ ░░░░░░░░░░░░░░░░░░░░│░░░░░░    0 10 to go       Lower Back     ··············▓▓▓▓▓▓▓▓▓▓
+                                                                         Rear Delts     ··············░░░░░░░░░░
+                                                                         Quads          ··············▓▓▓▓▓▓▓▓▓▓
+                                                                         Glutes         ··············▓▓▓▓▓▓▓▓▓▓
+                                                                         Hamstrings     ··············▓▓▓▓▓▓▓▓▓▓
+                                                                         Calves         ··············░░░░░░░░░░
+                                                                         Abs            ··············▓▓▓▓▓▓▓▓▓▓
+                                                                                          35  37  39  41  43  45
+                                                                         ░ <50% ▒ 50 ▓ 75 █ 100 ◆ 125+ · none
+ h/l period  ·  tab next screen  ·  ? help  ·  q quit
