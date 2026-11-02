@@ -1,0 +1,28 @@
+---
+source: src/ui/snapshot_tests.rs
+expression: "render(&mut app, width, height)"
+---
+ PureSets    1 Home   2 Insights   3 Why   4 Settings         target 10 sets/wk
+
+   This week   4 weeks   52 weeks    Nov 2 – Nov 8  ·  7.5 sets logged
+
+  ╭ Push ─────────────────────────────╮  ╭ Pull ─────────────────────────────╮
+  │ 1.5 avg/muscle  ·  7.5 total      │  │ 0 avg/muscle  ·  0 total          │
+  │ █████░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+  │ 18% of target                     │  │ 0% of target                      │
+  │ 4 muscles below target            │  │ 6 muscles below target            │
+  ╰───────────────────────────────────╯  ╰───────────────────────────────────╯
+  ╭ Legs ─────────────────────────────╮  ╭ Core ─────────────────────────────╮
+  │ 0 avg/muscle  ·  0 total          │  │ 0 avg/muscle  ·  0 total          │
+  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+  │ 0% of target                      │  │ 0% of target                      │
+  │ 4 muscles below target            │  │ 1 muscle below target             │
+  ╰───────────────────────────────────╯  ╰───────────────────────────────────╯
+
+  ▼ Chest: under half target for 5 weeks  ·  +14 more
+  SETS THIS WEEK
+                8 weeks
+  Chest         ▁▁▁▃▃▃▃▃ ██████░░░░░░░░░░░░░░│░░░░░░    3 7 to go
+  Front Delts   ▁▁▁▃▃▃▃▃ ██████░░░░░░░░░░░░░░│░░░░░░    3 7 to go
+  Triceps       ▁▁▁▂▂▂▂▂ ███░░░░░░░░░░░░░░░░░│░░░░░░  1.5 8.5 to go
+ h/l period  ·  tab next screen  ·  ? help  ·  q quit

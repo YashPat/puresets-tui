@@ -192,3 +192,59 @@ fn log_sheet_confirm_delete() {
         app
     });
 }
+
+/// Insights for a user who has trained only Chest for five weeks, so every
+/// other muscle has been under half the target for the whole time.
+fn neglected_app(extra_muscles: &[Muscle]) -> App {
+    let mut tracker = Tracker::new(Catalog::built_in().expect("bundled catalog parses"));
+    tracker.target = Some(Target::new(10).expect("10 is a valid target"));
+    let this_week = Week::containing(date(2026, 11, 4));
+    let mut week = this_week;
+    for _ in 0..4 {
+        week = week.previous();
+    }
+    tracker.first_week = Some(week);
+    for _ in 0..5 {
+        tracker
+            .log_sets(week, "Bench Press", 3)
+            .expect("Bench Press exists");
+        for &muscle in extra_muscles {
+            tracker.log.adjust(
+                week,
+                muscle,
+                crate::domain::Change::Add(crate::domain::Sets::whole(10)),
+            );
+        }
+        week = week.next();
+    }
+    App::new(
+        tracker,
+        date(2026, 11, 4),
+        Instant::now(),
+        "~/data.json".into(),
+    )
+}
+
+#[test]
+fn insights_neglected_more() {
+    // Bench credits only a few muscles, so most of the rest are flagged.
+    assert_screens("insights_neglected_more", || {
+        let mut app = neglected_app(&[]);
+        app.tab = Tab::Insights;
+        app
+    });
+}
+
+#[test]
+fn insights_neglected_few() {
+    // Everything but Rear Delts and Calves is on target.
+    let on_target: Vec<Muscle> = Muscle::ALL
+        .into_iter()
+        .filter(|m| !matches!(m, Muscle::RearDelts | Muscle::Calves))
+        .collect();
+    assert_screens("insights_neglected_few", || {
+        let mut app = neglected_app(&on_target);
+        app.tab = Tab::Insights;
+        app
+    });
+}
