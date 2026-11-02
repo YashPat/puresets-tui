@@ -1,8 +1,22 @@
 # puresets-tui
 
-PureSets in the terminal. A minimalist gym tracker built around one number: **weekly hard sets per muscle group**. Log an exercise and every muscle it works gets credit: one set for primary movers, half a set for secondary movers. There are no weights, reps, timers or RPE.
+[![CI](https://github.com/YashPat/puresets-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/YashPat/puresets-tui/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-It uses the same exercise list (`data/exercises.json`) and the same research curve (`data/hypertrophy-dose-response.csv`) as the iOS app. Both are compiled into the binary.
+**A gym tracker for your terminal that counts one thing: hard sets per muscle, per week.**
+
+Log an exercise and every muscle it works gets credit: one set for primary movers, half a set for secondary movers. There are no weights, reps, timers or RPE, so logging takes a few keystrokes. Home shows how close each muscle is to your weekly target.
+
+The exercise list (`data/exercises.json`) and the research curve (`data/hypertrophy-dose-response.csv`) are compiled into the binary. It runs fully offline and keeps your data in one plain JSON file.
+
+## Screens
+
+| Key | Screen | What it shows |
+|---|---|---|
+| `1` | **Home** | Every muscle's progress toward the weekly target, with week navigation, quick `+`/`-` and undo |
+| `2` | **Insights** | Averages by period and category, per-muscle trends, a notice for neglected muscles, and a muscle-by-week heatmap |
+| `3` | **Why** | The research behind the weekly target |
+| `4` | **Settings** | Weekly target (4 to 20 sets) and presets |
 
 ## Requirements
 
@@ -10,6 +24,12 @@ It uses the same exercise list (`data/exercises.json`) and the same research cur
 - An interactive terminal with UTF-8, at least **64×20** (80×24 or larger recommended)
 
 ## Installation
+
+```bash
+cargo install --git https://github.com/YashPat/puresets-tui
+```
+
+Or from a clone:
 
 ```bash
 cargo install --path .
@@ -139,3 +159,7 @@ CI (`.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy --all-ta
 | `Core` | Abs |
 
 So Overhead Press credits Front Delts and Triceps, plus half sets to Abs and Chest. Any other unknown muscle name is skipped.
+
+## License
+
+[MIT](LICENSE)
