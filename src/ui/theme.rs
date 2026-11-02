@@ -158,6 +158,11 @@ impl Theme {
         self.fg(color).add_modifier(Modifier::BOLD)
     }
 
+    /// Whether colour alone can tell levels apart; without it, glyphs must.
+    pub fn has_color(self) -> bool {
+        self.color == Palette::Ansi
+    }
+
     /// Progress colours follow the iOS app: red, orange, then on-target hues.
     pub fn level(self, level: ProgressLevel) -> Style {
         self.fg(match level {

@@ -15,7 +15,6 @@ pub use insights::{
     CategorySummary, Direction, DosePoint, Goal, Insights, Period, ProgressLevel, Target,
     dose_response, muscle_week_levels,
 };
-pub use insights::{NeglectedMuscle, neglected_muscles};
 pub use log::{Change, TrainingLog, WeekSets};
 pub use muscle::{Category, Muscle};
 pub use sets::Sets;

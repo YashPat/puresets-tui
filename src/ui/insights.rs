@@ -1,6 +1,8 @@
 //! Insights: averages over a period, per category and per muscle, plus a
 //! history of weekly totals.
 
+use std::fmt::Write as _;
+
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -16,10 +18,7 @@ use super::{
 };
 use crate::{
     app::{App, MouseTarget},
-    domain::{
-        CategorySummary, Insights, NeglectedMuscle, Period, ProgressLevel, Sets, Target,
-        muscle_week_levels, neglected_muscles,
-    },
+    domain::{CategorySummary, Insights, Period, ProgressLevel, Sets, Target, muscle_week_levels},
 };
 
 const NAME: usize = 14;
@@ -62,16 +61,6 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, the
     }
     draw_cards(frame, cards, &insights, target, card_rows, theme);
 
-    let neglected = neglected_muscles(&app.tracker.log, current, target);
-    let shown = neglected_shown(body.height);
-    let with_neglected = |column: Rect| {
-        Layout::vertical([
-            Constraint::Length(neglected_height(&neglected, shown)),
-            Constraint::Min(0),
-        ])
-        .areas::<2>(column)
-    };
-
     if body.width >= HISTORY_MIN_WIDTH * 2 {
         let [muscles, _, history] = Layout::horizontal([
             Constraint::Fill(3),
@@ -79,10 +68,6 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, the
             Constraint::Fill(2),
         ])
         .areas(body);
-        // The notice stays in the left column so the right one keeps the
-        // height the heatmap needs.
-        let [notice, muscles] = with_neglected(muscles);
-        draw_neglected(frame, notice, &neglected, shown, theme);
         draw_ranked(frame, muscles, app, &insights, theme);
         let (history, heatmap) = split_heatmap(history);
         draw_history(frame, history, app, theme);
@@ -90,70 +75,8 @@ pub fn draw(frame: &mut Frame<'_>, area: Rect, app: &App, hits: &mut HitMap, the
             draw_heatmap(frame, heatmap, app, theme);
         }
     } else {
-        let [notice, body] = with_neglected(body);
-        draw_neglected(frame, notice, &neglected, shown, theme);
         draw_ranked(frame, body, app, &insights, theme);
     }
-}
-
-/// Most flagged muscles listed before the rest collapse into "+N more".
-const NEGLECTED_SHOWN: usize = 3;
-/// Below this body height the notice shrinks to one line, so the ranked list
-/// keeps its rows.
-const NEGLECTED_COMPACT_BELOW: u16 = 20;
-
-/// How many flagged muscles get a row: all of `NEGLECTED_SHOWN` normally,
-/// just the longest streak in a short body.
-fn neglected_shown(body_height: u16) -> usize {
-    if body_height < NEGLECTED_COMPACT_BELOW {
-        1
-    } else {
-        NEGLECTED_SHOWN
-    }
-}
-
-/// Rows the neglected block needs, including one blank row after it unless
-/// compact; 0 when nothing is flagged.
-fn neglected_height(flagged: &[NeglectedMuscle], shown: usize) -> u16 {
-    let rows = u16::try_from(flagged.len().min(shown)).unwrap_or(0);
-    if rows == 0 || shown == 1 {
-        rows
-    } else {
-        rows + 1
-    }
-}
-
-/// Muscles that have been under half the target for several weeks, one per
-/// row. Draws nothing when none are flagged.
-fn draw_neglected(
-    frame: &mut Frame<'_>,
-    area: Rect,
-    flagged: &[NeglectedMuscle],
-    shown: usize,
-    theme: Theme,
-) {
-    let hidden = flagged.len().saturating_sub(shown);
-    let last = flagged.len().min(shown).saturating_sub(1);
-    let lines: Vec<Line<'_>> = flagged
-        .iter()
-        .take(shown)
-        .enumerate()
-        .map(|(index, neglected)| {
-            let mut spans = vec![
-                Span::styled("▼ ", theme.level(ProgressLevel::Low)),
-                Span::styled(neglected.muscle.name(), theme.bold()),
-                Span::styled(
-                    format!(": under half target for {} weeks", neglected.weeks),
-                    theme.dim(),
-                ),
-            ];
-            if index == last && hidden > 0 {
-                spans.push(Span::styled(format!("  ·  +{hidden} more"), theme.dim()));
-            }
-            Line::from(spans)
-        })
-        .collect();
-    frame.render_widget(Paragraph::new(lines), area);
 }
 
 fn draw_selector(
@@ -348,14 +271,14 @@ fn draw_history(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
             };
             Bar::default()
                 .value(u64::from(total.halves() / 2))
-                .text_value(total.to_string())
+                .text_value(String::new())
                 .label(Line::from(format!("{}", week.number())))
                 .style(style)
-                .value_style(theme.dim())
         })
         .collect();
 
-    let [heading, _, chart, caption] = Layout::vertical([
+    let [heading, _, values, chart, caption] = Layout::vertical([
+        Constraint::Length(1),
         Constraint::Length(1),
         Constraint::Length(1),
         Constraint::Min(0),
@@ -372,6 +295,23 @@ fn draw_history(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
         .bar_gap(1)
         .bar_style(theme.text());
     frame.render_widget(chart_widget, chart);
+
+    // Totals sit in a row above the bars rather than painted onto them, where
+    // they were unreadable and clipped to the bar width.
+    let slot = usize::from(bar_width) + 1;
+    let mut row = String::new();
+    for &week in weeks.iter().rev() {
+        let total = app.tracker.log.week_total(week);
+        let mut text = total.to_string();
+        if text.len() > slot - 1 {
+            text = (total.halves() / 2).to_string();
+        }
+        if text.len() > slot - 1 {
+            text.clear();
+        }
+        let _ = write!(row, "{text:^w$} ", w = slot - 1);
+    }
+    frame.render_widget(Line::styled(row, theme.dim()), values);
     frame.render_widget(
         Line::styled(
             format!("last {HISTORY_WEEKS} weeks, by week number"),
@@ -398,9 +338,13 @@ fn split_heatmap(area: Rect) -> (Rect, Option<Rect>) {
     (history, Some(heatmap))
 }
 
-/// One glyph per level, so the grid reads without colour. `None` is a week
-/// before tracking began.
-const fn heat_glyph(level: Option<ProgressLevel>) -> char {
+/// Solid blocks when colour carries the level; otherwise one shade per level,
+/// so the grid still reads under `NO_COLOR`. `None` is a week before tracking
+/// began.
+fn heat_glyph(level: Option<ProgressLevel>, theme: Theme) -> char {
+    if theme.has_color() && level.is_some() {
+        return '█';
+    }
     match level {
         None => '·',
         Some(ProgressLevel::Low) => '░',
@@ -417,7 +361,7 @@ fn heat_style(level: Option<ProgressLevel>, theme: Theme) -> Style {
 
 fn heat_span(level: Option<ProgressLevel>, theme: Theme) -> Span<'static> {
     Span::styled(
-        heat_glyph(level).to_string().repeat(HEATMAP_CELL),
+        heat_glyph(level, theme).to_string().repeat(HEATMAP_CELL),
         heat_style(level, theme),
     )
 }
@@ -468,7 +412,7 @@ fn draw_heatmap(frame: &mut Frame<'_>, area: Rect, app: &App, theme: Theme) {
         (None, "none"),
     ] {
         legend.push(Span::styled(
-            heat_glyph(level).to_string(),
+            heat_glyph(level, theme).to_string(),
             heat_style(level, theme),
         ));
         legend.push(Span::styled(format!(" {text}"), theme.dim()));
